@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Seata,分布式事务,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Seata 是阿里开源的基于Java的分布式事务解决方案  AT，XA，TCC，SagaSeata 提供四种模式解决分布式事务场景，AT，XA，TCC，Saga。简单叨咕叨咕我对这几种模式的理解 AT 这是Seata的一大特色，AT对业务代码完全无侵入性，使用非常简单，改造成本低。我们只需要关注自己的业务SQL，Seata会通过分析我们业务SQL，反向生成回滚数据 AT 包含两个阶段  一阶段，">
+<meta name="keywords" content="Seata,分布式事务">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式事务 Seata AT模式原理与实战">
+<meta property="og:url" content="https://yintianwen.top/post/6fe3d525.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="Seata 是阿里开源的基于Java的分布式事务解决方案  AT，XA，TCC，SagaSeata 提供四种模式解决分布式事务场景，AT，XA，TCC，Saga。简单叨咕叨咕我对这几种模式的理解 AT 这是Seata的一大特色，AT对业务代码完全无侵入性，使用非常简单，改造成本低。我们只需要关注自己的业务SQL，Seata会通过分析我们业务SQL，反向生成回滚数据 AT 包含两个阶段  一阶段，">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/dbaa902c-670e-45fb-8d07-095dfa9cf8e3">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/1a0ca410-6ea7-4472-b014-9461b6f1d67e">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d859fd86-bd99-4bea-ae29-d4c74929fa88">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/539a795d-f7e3-4e63-9b10-fa9d5cdb47b2">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/fc23478d-9daa-49ed-8824-a4ed59cd4e72">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/01f63642-9fdd-40a9-9d7f-ad86df90d202">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/56475d05-94c4-49f6-8972-1378532375ef">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/813c2788-a413-4dde-8764-491fa5f845d5">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8d861c64-f99a-433f-b737-887a63f09f49">
+<meta property="og:updated_time" content="2021-01-14T13:50:11.090Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分布式事务 Seata AT模式原理与实战">
+<meta name="twitter:description" content="Seata 是阿里开源的基于Java的分布式事务解决方案  AT，XA，TCC，SagaSeata 提供四种模式解决分布式事务场景，AT，XA，TCC，Saga。简单叨咕叨咕我对这几种模式的理解 AT 这是Seata的一大特色，AT对业务代码完全无侵入性，使用非常简单，改造成本低。我们只需要关注自己的业务SQL，Seata会通过分析我们业务SQL，反向生成回滚数据 AT 包含两个阶段  一阶段，">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/dbaa902c-670e-45fb-8d07-095dfa9cf8e3">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/6fe3d525.html">
+
+
+
+
+
+  <title>分布式事务 Seata AT模式原理与实战 | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">Hello World</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/6fe3d525.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/005HdV9dly1g6kynwa5frj3074074wf4.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">分布式事务 Seata AT模式原理与实战</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-11-27T08:00:00+08:00">
+                2020-11-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>Seata 是阿里开源的基于Java的分布式事务解决方案</p>
+</blockquote>
+<h4 id="AT，XA，TCC，Saga"><a href="#AT，XA，TCC，Saga" class="headerlink" title="AT，XA，TCC，Saga"></a>AT，XA，TCC，Saga</h4><p>Seata 提供四种模式解决分布式事务场景，AT，XA，TCC，Saga。简单叨咕叨咕我对这几种模式的理解</p>
+<h5 id="AT"><a href="#AT" class="headerlink" title="AT"></a>AT</h5><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/dbaa902c-670e-45fb-8d07-095dfa9cf8e3" alt="image.png"></p>
+<p>这是Seata的一大特色，AT对业务代码完全无侵入性，使用非常简单，改造成本低。我们只需要关注自己的业务SQL，Seata会通过分析我们业务SQL，反向生成回滚数据</p>
+<p>AT 包含两个阶段</p>
+<ul>
+<li>一阶段，所有参与事务的分支，本地事务Commit 业务数据和回滚日志（undoLog）</li>
+<li>二阶段，事务协调者根据所有分支的情况，决定本次全局事务是Commit 还是 Rollback（二阶段是完全异步）</li>
+</ul>
+<h5 id="XA"><a href="#XA" class="headerlink" title="XA"></a>XA</h5><p>也是我们常说的二阶段提交，XA要求数据库本身提供对规范和协议的支持。XA用起来的话，也是对业务代码无侵入性的。</p>
+<p>上述其他三种模式，都是属于<strong>补偿型</strong>，无法保证全局一致性。啥意思呢，例如刚刚说的AT模式，我们是可能读到这一次分布式事务的中间状态，而XA模式不会。</p>
+<blockquote>
+<p>补偿型 事务处理机制构建在 事务资源（数据库） 之上（要么在中间件层面，要么在应用层面），事务资源 本身对分布式事务是无感知的，这也就导致了补偿型事务无法做到真正的 全局一致性 。<br>比如，一条库存记录，处在 补偿型 事务处理过程中，由 100 扣减为 50。此时，仓库管理员连接数据库，查询统计库存，就看到当前的 50。之后，事务因为意外回滚，库存会被补偿回滚为 100。显然，仓库管理员查询统计到的 50 就是 脏 数据。<br>如果是XA的话，中间态数据库存 50 由数据库本身保证，不会被仓库管理员读到（当然隔离级别需要 读已提交 以上）</p>
+</blockquote>
+<p>但是全局一致性带来的结果就是<strong>数据的锁定</strong>（AT模式也是存在全局锁的，但是隔离级别无法保证，后边我们会详细说），例如全局事务中有一条update语句，其他事务想要更新同一条数据的话，只能等待全局事务结束</p>
+<blockquote>
+<p>传统XA模式是存在一些问题的，Seata也是做了相关的优化，更多关于Seata XA的内容，传送门👉<a href="http://seata.io/zh-cn/blog/seata-xa-introduce.html" target="_blank" rel="noopener">http://seata.io/zh-cn/blog/seata-xa-introduce.html</a></p>
+</blockquote>
+<h5 id="TCC"><a href="#TCC" class="headerlink" title="TCC"></a>TCC</h5><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/1a0ca410-6ea7-4472-b014-9461b6f1d67e" alt="image.png"></p>
+<p>TCC 模式同样包含两个阶段</p>
+<ul>
+<li>Try 阶段 ：所有参与分布式事务的分支，对业务资源进行检查和预留</li>
+<li>二阶段 Confirm：所有分支的<strong>Try</strong>全部成功后，执行业务提交</li>
+<li>二阶段 Cancel：取消Try阶段预留的业务资源</li>
+</ul>
+<blockquote>
+<p>对比AT或者XA模式来说，TCC模式需要我们自己抽象并实现Try，Confirm，Cancel三个接口，编码量会大一些，但是由于事务的每一个阶段都由开发人员自行实现。而且相较于AT模式来说，减少了SQL解析的过程，也没有全局锁的限制，所以TCC模式的性能是优于AT 、XA模式。<br>PS：果然简单和高效难以两全的</p>
+</blockquote>
+<h5 id="Saga"><a href="#Saga" class="headerlink" title="Saga"></a>Saga</h5><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d859fd86-bd99-4bea-ae29-d4c74929fa88" alt="image.png"></p>
+<p>Saga 是长事务解决方案，每个参与者需要实现事务的<strong>正向操作和补偿操作</strong>。当参与者正向操作执行失败时，回滚本地事务的同时，会调用上一阶段的补偿操作，在业务失败时最终会使事务回到初始状态</p>
+<blockquote>
+<p>Saga与TCC类似，同样没有全局锁。由于相比缺少锁定资源这一步，在某些适合的场景，Saga要比TCC实现起来更简单。<br>由于Saga和TCC都需要我们手动编码实现，所以在开发时我们需要参考一些设计上的规范，由于不是本文重点，这里就不多说了，可以参考<a href="http://seata.io/zh-cn/blog/seata-at-tcc-saga.html" target="_blank" rel="noopener">分布式事务 Seata 及其三种模式详解</a></p>
+</blockquote>
+<p>在我们了解完四种分布式事务的原理之后，我们回到本文重点AT模式</p>
+<h4 id="AT-如何使用"><a href="#AT-如何使用" class="headerlink" title="AT 如何使用"></a>AT 如何使用</h4><p>模拟需求：以下订单为例，在分布式的电商场景中，订单服务和库存服务可能是两个数据库</p>
+<p>我们先来看看AT模式下的代码是什么样的，这里忽略了Seata的相关配置，只看业务部分</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/539a795d-f7e3-4e63-9b10-fa9d5cdb47b2" alt="image.png"></p>
+<p>在需要开启分布式事务的方法上标记@GlobalTransactional，然后执行分别执行扣减库存和扣减库存操作的，事务的参与者可以是本地的数据源，或者RPC的远程调用（远程调用的话需要携带全局事务ID，也就是上图的xid）</p>
+<h4 id="AT-一阶段"><a href="#AT-一阶段" class="headerlink" title="AT 一阶段"></a>AT 一阶段</h4><p>之前说过AT模式分为两个阶段，第一阶段包括提交业务数据和回滚日志（undoLog），第一阶段具体流程如下图</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/fc23478d-9daa-49ed-8824-a4ed59cd4e72" alt="image.png"></p>
+<h5 id="GlobalTransactional-切面"><a href="#GlobalTransactional-切面" class="headerlink" title="GlobalTransactional 切面"></a>GlobalTransactional 切面</h5><p>标记<code>@GlobalTransactional</code>的方法通过AOP实现了，开启全局事务和提交全局事务两个操作，与Spring 事务机制类似，当 GlobalTransactionalInterceptor 在事务执行过程中捕获到Throwable时，会发起全局事务回滚</p>
+<p>0.1 步骤中会生成一个全局事务ID</p>
+<p>0.2 所有事务参与者执行结束后，一阶段事务提交</p>
+<h5 id="undoLog"><a href="#undoLog" class="headerlink" title="undoLog"></a>undoLog</h5><p>我们先来看看 Seata undoLog 的结构<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 省略了相关方法</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SQLUndoLog</span> </span>&#123;</span><br><span class="line">	<span class="comment">// insert, update ...</span></span><br><span class="line">    <span class="keyword">private</span> SQLType sqlType;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String tableName;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> TableRecords beforeImage;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> TableRecords afterImage;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>Seata 在执行业务SQL前后，会生成beforeImage和afterImage，在需要回滚时，根据SQLType，决定具体的回滚策略，例如SQLType=update时，将数据回滚到beforeImage的状态，如果SQLType=insert，则根据afterImage删除数据</p>
+<p>如2.4所示，每条业务SQL，执行成功后，会为这条SQL生成LockKey，格式为<code>tableName:PrimaryKey</code></p>
+<h5 id="注册分支事务"><a href="#注册分支事务" class="headerlink" title="注册分支事务"></a>注册分支事务</h5><p>在3.1步骤注册分支事务时，client会把所有的LockKey 拼到一起作为<strong>全局锁</strong>发送给Seata-server。如果注册成功，写入undoLog，并提交本地事务，一阶段结束，等待二阶段反馈</p>
+<p>如果当前有其他分支事务已经持有了相同的锁（即其他事务也在处理相同表的同一行），则client 注册事务分支失败。client会根据客户端定义的重发时间和重发次数进行不断的尝试，如果重试结束仍然没有获得锁，则一阶段失败，本地事务回滚。如果该全局事务存在已经注册成功分支事务，Seata-server 进行二阶段回滚</p>
+<p>全局锁会在分支事务二阶段结束后释放</p>
+<blockquote>
+<p>Seata 全局锁的设计是为了什么？<br>以扣减库存场景为例，TX1 完成库存扣减的一阶段，库存从100扣减为99，正在等待二阶段的通知。TX2也要扣减同一商品的库存，如果没有全局锁的限制，TX2库存从99扣减为98，这时如果TX1接收到回滚通知，进行回滚把库存从98回滚到100。因为没有全局锁，造成了<strong>脏写</strong></p>
+</blockquote>
+<h4 id="AT-二阶段"><a href="#AT-二阶段" class="headerlink" title="AT 二阶段"></a>AT 二阶段</h4><p>二阶段是完全异步化的并且完全由Seata控制，Seata根据所有事务参与者的提交情况决定二阶段如何处理</p>
+<ul>
+<li>如果所有事务提交成功，则二阶段的任务就是删除一阶段生成 的undoLog，并释放<strong>全局锁</strong></li>
+<li>如果部分事务参与者提交失败，则需要根据undoLog对已经注册的事务分支进行回滚，并释放<strong>全局锁</strong></li>
+</ul>
+<h4 id="对Seata提出的疑问"><a href="#对Seata提出的疑问" class="headerlink" title="对Seata提出的疑问"></a>对Seata提出的疑问</h4><p>至此我们已经初步了解了Seata的AT模式是如何实现的了</p>
+<p>如果你也和我一样，仔细思考了上述过程，可能会提出一些问题，这边我列举一下我在学习Seata时，遇到的问题，以及我得出的结论</p>
+<p><strong>问题1. Seata如何做到无侵入的分析业务SQL生成undoLog，注册事务分支等操作？</strong></p>
+<p>Seata 代理了DataSource，我们可以通过在代码注入一个DataSource来验证我的说法，目前的DataSource 是 <code>io.seata.rm.datasource.DataSourceProxy</code></p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/01f63642-9fdd-40a9-9d7f-ad86df90d202" alt="image.png"></p>
+<p>所有的Java持久化框架，最终在操作数据库时都会通过DataSource接口获取Connection，通过Connection 实现对数据库的增删改查，事务控制。</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/56475d05-94c4-49f6-8972-1378532375ef" alt="image.png"></p>
+<p>Seata 通过代理Connection的方式，做到了无侵入的生成undoLog，注册事务分支，具体源码可以查看<code>io.seata.rm.datasource.ConnectionProxy</code></p>
+<p><strong>问题2. ConnectionProxy 如何判断当前事务是全局事务，还是本地事务？</strong></p>
+<p>通过当前线程是否绑定了全局事务id，在进行全局事务之前，需要调用<code>RootContext.bind(xid);</code></p>
+<p><strong>问题3. 全局事务并发更新</strong></p>
+<p>还是以下订单扣减库存的场景为例，如果TX1和TX2同时扣减product_id为1的库存，这时Seata会不会生成相同的beforeImage？</p>
+<p>举个例子，TX1读库存为100，TX1扣减库存1，此时BeforeImage为100<br>紧接着 如果TX2读库存也为100，那么就有问题了，不管TX2扣减多少库存，如果TX1回滚那么相当于覆盖了TX2扣减的库存，出现了脏写</p>
+<p>Seata是如何解决这个问题的？</p>
+<p>源码位置：<code>io.seata.rm.datasource.exec.AbstractDMLBaseExecutor::executeAutoCommitFalse</code><br><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/813c2788-a413-4dde-8764-491fa5f845d5" alt="image.png"></p>
+<p>可以看到这里的逻辑和我上面画的图一致，证明我没有瞎说 😄</p>
+<p>我们来看一下<code>beforeImage()</code>，这是一个抽象方法，看一下他的子类<code>UpdateExecutor</code>是如何实现的</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8d861c64-f99a-433f-b737-887a63f09f49" alt="image.png"></p>
+<p>通过Debug，可以看出Seata这边也是确实考虑了这个问题，直接简单而有效的解决了这个问题</p>
+<p>回到我们的例子，由于<code>SELECT FOR UPDATE</code>的存在，TX2如果也想读同一条数据的话，只能等到TX1 提交事务后，才能读到。所以问题解决</p>
+<p><strong>问题4. 全局事务外的更新</strong></p>
+<p>我们现在可以确认在Seata的保证下，全局事务，不会造成数据的脏写，但是全局事务外会！</p>
+<p>什么意思呢？</p>
+<p>还以库存为例</p>
+<ul>
+<li>用户正在抢购，用户A完成了1阶段的库存扣减，这个时候库存为99。</li>
+<li>此时库存管理员上线了，他查了一下库存为99。嗯…太少了，我加100个，库存管理员把库存更新为200。</li>
+<li>而此时seata给用户A生成beforeImage为100，如果此时用户A的全局事务失败了，发生了回滚，再次将库存更新为100… 再次出现脏写</li>
+</ul>
+<p>Seata 针对这个问题，提供了<code>@GlobalLock</code>注解，标记该注解时，会像全局事务一样进行SQL分析，竞争全局锁，就不会出现上述问题了</p>
+<p>关于这个问题可以参考Seata的FAQ文档 <a href="http://seata.io/zh-cn/docs/overview/faq.html" target="_blank" rel="noopener">http://seata.io/zh-cn/docs/overview/faq.html</a></p>
+<p><strong>问题5. @GlobalTransactional 和 @Transactional 同时使用会怎么样</strong></p>
+<p>我们上文中已经说过了 @GlobalTransactional 的作用了，他是负责开启全局事务/提交事务1阶段，说白了@GlobalTransactional 只和Seata-server 交互，而 @Transactional 管理的是本地数据库的事务，所以二者不发生冲突。</p>
+<blockquote>
+<p>但是需要注意 @GlobalTransactional AOP 覆盖范围一定要大于 @Transactional </p>
+</blockquote>
+<p><strong>问题6. 如果其中某一个事务分支超时未提交，会发生什么</strong></p>
+<p>这个我并没有看源码，而是通过跑demo，验证的</p>
+<p>例如现在有A，B两个事务分支</p>
+<ul>
+<li>A 正常提交，并向Seata注册分支成功</li>
+<li>B 2分钟后提交事务，并向Seata发起注册</li>
+</ul>
+<p>Seata的全局事务超时时间，默认是1分钟，Seata-server 在检测到有超时的全局事务时，会向所有已提交的分支，发起回滚。而超时提交的事务，向Seata-server发起分支注册时，响应结果为事务已超时，或者事务不存在，也会回滚本地事务</p>
+<p><strong>问题7. Seata-client 如何接收Seata-server发起的通知</strong></p>
+<p>Seata-client 包含了Netty服务，在启动时Netty会监听端口，并向Seata-server 发起注册。server中存储了client 的调用地址。</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>我们学习了Seata的AT模式是如何工作的，可以看出Seata模式在开发上是非常简单的，但是Seata的背后为了维持分布式事务的数据一致性，做了大量的工作，AT模式非常适合现有的业务模型直接迁移。</p>
+<p>但是他的缺点也很明显，性能并不是那么的优秀。例如我们刚刚看到的全局锁的问题，为了数据不会发生脏写，Seata牺牲了业务的并发能力。在非常要求性能的场景，可能还是需要考虑TCC，SAGA，可靠消息等方案</p>
+<p>在使用Seata开发前，建议大家先去阅读一下FAQ文档，避免踩坑 <a href="https://seata.io/zh-cn/docs/overview/faq.html" target="_blank" rel="noopener">https://seata.io/zh-cn/docs/overview/faq.html</a></p>
+<h4 id="DEMO"><a href="#DEMO" class="headerlink" title="DEMO"></a>DEMO</h4><p><a href="https://github.com/TavenYin/taven-springboot-learning/tree/master/springboot-seata" target="_blank" rel="noopener">https://github.com/TavenYin/taven-springboot-learning/tree/master/springboot-seata</a></p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="http://seata.io/zh-cn/docs/overview/what-is-seata.html" target="_blank" rel="noopener">Seata是什么 - http://seata.io/zh-cn/docs/overview/what-is-seata.html</a><br><a href="http://seata.io/zh-cn/docs/overview/faq.html" target="_blank" rel="noopener">Seata常见问题 - http://seata.io/zh-cn/docs/overview/faq.html</a><br><a href="http://seata.io/zh-cn/blog/seata-at-mode-design.html" target="_blank" rel="noopener">分布式事务中间件 Seata 的设计原理 - http://seata.io/zh-cn/blog/seata-at-mode-design.html</a><br><a href="http://seata.io/zh-cn/blog/seata-at-tcc-saga.html" target="_blank" rel="noopener">分布式事务 Seata 及其三种模式详解 - http://seata.io/zh-cn/blog/seata-at-tcc-saga.html</a><br><a href="http://seata.io/zh-cn/blog/seata-xa-introduce.html" target="_blank" rel="noopener">分布式事务如何实现？深入解读 Seata 的 XA 模式 - http://seata.io/zh-cn/blog/seata-xa-introduce.html</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Seata/" rel="tag"># Seata</a>
+          
+            <a href="/tags/分布式事务/" rel="tag"># 分布式事务</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/bef5c7fd.html" rel="next" title="浅入浅出 Spring 事务传播实现原理">
+                <i class="fa fa-chevron-left"></i> 浅入浅出 Spring 事务传播实现原理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/e860cc2d.html" rel="prev" title="个人简历备份">
+                个人简历备份 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/005HdV9dly1g6kynwa5frj3074074wf4.jpg" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">45</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">48</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://gitee.com/yintianwen7" target="_blank" title="Gitee">
+                      
+                        <i class="fa fa-fw fa-git"></i>Gitee</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#AT，XA，TCC，Saga"><span class="nav-number">1.</span> <span class="nav-text">AT，XA，TCC，Saga</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#AT"><span class="nav-number">1.1.</span> <span class="nav-text">AT</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#XA"><span class="nav-number">1.2.</span> <span class="nav-text">XA</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#TCC"><span class="nav-number">1.3.</span> <span class="nav-text">TCC</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Saga"><span class="nav-number">1.4.</span> <span class="nav-text">Saga</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AT-如何使用"><span class="nav-number">2.</span> <span class="nav-text">AT 如何使用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AT-一阶段"><span class="nav-number">3.</span> <span class="nav-text">AT 一阶段</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#GlobalTransactional-切面"><span class="nav-number">3.1.</span> <span class="nav-text">GlobalTransactional 切面</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#undoLog"><span class="nav-number">3.2.</span> <span class="nav-text">undoLog</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#注册分支事务"><span class="nav-number">3.3.</span> <span class="nav-text">注册分支事务</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AT-二阶段"><span class="nav-number">4.</span> <span class="nav-text">AT 二阶段</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#对Seata提出的疑问"><span class="nav-number">5.</span> <span class="nav-text">对Seata提出的疑问</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DEMO"><span class="nav-number">7.</span> <span class="nav-text">DEMO</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#参考"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
