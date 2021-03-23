@@ -135,8 +135,8 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>Redis</tag>
         <tag>锁</tag>
+        <tag>Redis</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
