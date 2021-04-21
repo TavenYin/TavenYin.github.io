@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Oracle,LogMiner,数据库迁移技术,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="LogMiner 是什么LogMiner 是Oracle官方提供的工具，可以解析 Redo log 和 Archived Redo log LogMiner 可以做什么？官方文档中列举了很多，大家可以自己去看下。 我们目前的项目在使用基于LogMiner 的 Debezium Oracle Connector 做数据迁移 Oracle LogMiner 数据迁移的原理是什么？首先需要了解几个概念，">
+<meta name="keywords" content="Oracle,LogMiner,数据库迁移技术">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Oracle LogMiner 数据迁移实战">
+<meta property="og:url" content="https://yintianwen.top/post/82cb4508.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="LogMiner 是什么LogMiner 是Oracle官方提供的工具，可以解析 Redo log 和 Archived Redo log LogMiner 可以做什么？官方文档中列举了很多，大家可以自己去看下。 我们目前的项目在使用基于LogMiner 的 Debezium Oracle Connector 做数据迁移 Oracle LogMiner 数据迁移的原理是什么？首先需要了解几个概念，">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/ebb53ba4-a675-4c11-842a-0ac1d7aae1b6">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/e2d408fd-30bf-45c6-a3f3-fed9c117ec71">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/84afe7d2-f3ef-40dc-ba62-bc638fab1394">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/5b8f28dd-68d9-4e71-9002-e02f88e2fbc9">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d7f0105a-f529-43a0-9f09-4faa67c2e677">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/96688b3b-2146-42e8-ad52-12e1c2537d9b">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/f4b9c309-0892-4a05-863d-53012b1e688c">
+<meta property="og:updated_time" content="2021-04-21T13:36:52.961Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Oracle LogMiner 数据迁移实战">
+<meta name="twitter:description" content="LogMiner 是什么LogMiner 是Oracle官方提供的工具，可以解析 Redo log 和 Archived Redo log LogMiner 可以做什么？官方文档中列举了很多，大家可以自己去看下。 我们目前的项目在使用基于LogMiner 的 Debezium Oracle Connector 做数据迁移 Oracle LogMiner 数据迁移的原理是什么？首先需要了解几个概念，">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/ebb53ba4-a675-4c11-842a-0ac1d7aae1b6">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/82cb4508.html">
+
+
+
+
+
+  <title>Oracle LogMiner 数据迁移实战 | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">Hello World</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/82cb4508.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Oracle LogMiner 数据迁移实战</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-04-20T00:00:00+08:00">
+                2021-04-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/DB/" itemprop="url" rel="index">
+                    <span itemprop="name">DB</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="LogMiner-是什么"><a href="#LogMiner-是什么" class="headerlink" title="LogMiner 是什么"></a>LogMiner 是什么</h3><p>LogMiner 是Oracle官方提供的工具，可以解析 <strong>Redo log 和 Archived Redo log</strong></p>
+<h3 id="LogMiner-可以做什么？"><a href="#LogMiner-可以做什么？" class="headerlink" title="LogMiner 可以做什么？"></a>LogMiner 可以做什么？</h3><p>官方文档中列举了很多，大家可以自己去看下。</p>
+<p>我们目前的项目在使用基于LogMiner 的 <a href="https://debezium.io/documentation/reference/connectors/oracle.html" target="_blank" rel="noopener">Debezium Oracle Connector</a> 做数据迁移</p>
+<h3 id="Oracle-LogMiner-数据迁移的原理是什么？"><a href="#Oracle-LogMiner-数据迁移的原理是什么？" class="headerlink" title="Oracle LogMiner 数据迁移的原理是什么？"></a>Oracle LogMiner 数据迁移的原理是什么？</h3><p>首先需要了解几个概念，这里简单介绍下</p>
+<ul>
+<li>Redo log：Redo中记录了所有对数据块的更改，Oralce 要求至少有两个以上的Redo Log Group</li>
+<li>Archived Redo log：当一个Redo Log 写满之后，会发生日志切换，数据的更改会记录到下一个Redo Log中（所以一定要有两个以上的Redo）。如果开启了归档模式，Oracle 会将写满的Redo Log 归档。</li>
+<li>SCN (System Change Number)：Oracle 内部逻辑时间戳</li>
+<li>Flashback：通过闪回查询 <code>SELECT ... AS OF SCN</code> 可以查询Oracle某个时间点的全量数据</li>
+</ul>
+<hr>
+<p>思路如下：</p>
+<ol>
+<li>首先查询出一下当前的SCN</li>
+<li>根据SCN 查询出这一时刻的全量数据</li>
+<li>通过Logminer 指定Start_SCN，获取增量数据</li>
+</ol>
+<!-- 首先介绍下redo和archived 
+
+然后是闪回 scn的概念 -->
+<h3 id="安装与配置"><a href="#安装与配置" class="headerlink" title="安装与配置"></a>安装与配置</h3><p>想尝试却不太熟悉Oracle的同学，可以参考一下我整理的文档</p>
+<ul>
+<li>Oralce Install (docker)： <a href="https://github.com/TavenYin/database-cdc/blob/master/doc/oracle/oracle-install.md" target="_blank" rel="noopener">https://github.com/TavenYin/database-cdc/blob/master/doc/oracle/oracle-install.md</a></li>
+<li>Logminer：<a href="https://github.com/TavenYin/database-cdc/blob/master/doc/oracle/oracle12c-logminer.md" target="_blank" rel="noopener">https://github.com/TavenYin/database-cdc/blob/master/doc/oracle/oracle12c-logminer.md</a></li>
+</ul>
+<h3 id="小试牛刀"><a href="#小试牛刀" class="headerlink" title="小试牛刀"></a>小试牛刀</h3><p>在准备好了环境之后，我们来开箱体验一下Logminer</p>
+<p> logminer 用户登录 <code>conn c##logminer/password</code></p>
+<h4 id="1-构建数据字典"><a href="#1-构建数据字典" class="headerlink" title="1. 构建数据字典"></a>1. 构建数据字典</h4><p>LogMiner使用数据字典将内部对象标识符和数据类型转换为正常字段和数据格式<br>    <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 这是一条常规的SQL</span><br><span class="line"> INSERT INTO HR.JOBS(JOB_ID, JOB_TITLE, MIN_SALARY, MAX_SALARY)  VALUES(&apos;IT_WT&apos;,&apos;Technical Writer&apos;, 4000, 11000);</span><br><span class="line"># 如果没有数据字典，数据会是这样的</span><br><span class="line">insert into &quot;UNKNOWN&quot;.&quot;OBJ# 45522&quot;(&quot;COL 1&quot;,&quot;COL 2&quot;,&quot;COL 3&quot;,&quot;COL 4&quot;)     </span><br><span class="line">values (HEXTORAW(&apos;45465f4748&apos;),HEXTORAW(&apos;546563686e6963616c20577269746572&apos;),HEXTORAW(&apos;c229&apos;),HEXTORAW(&apos;c3020b&apos;));</span><br></pre></td></tr></table></figure></p>
+<p>官方文档中提到三种方式：</p>
+<ul>
+<li>在线数据字典：当你可以访问创建Redo的源数据库并且<strong>表结构不会发生任何变动时</strong>。可以考虑使用在线数据字典。这是最简单有效的，也是Oracle的推荐选项<br>由于在线数据字典永远存储的是最新的结构。如果发生了表结构变动，Logminer 捕获到旧版本的数据，SQL将会如上述代码块中那样</li>
+<li>提取数据字典到redo中：<br>需要执行命令<code>BEGIN DBMS_LOGMNR_D.BUILD (options =&gt; DBMS_LOGMNR_D.STORE_IN_REDO_LOGS); END;</code><br>该操作会占用一定数据库资源</li>
+<li>提取数据字典到Flat File：Oracle维护该选项是为了兼容历史版本，本文并没有使用到该方式，不多做介绍</li>
+</ul>
+<blockquote>
+<p>LogMiner 在启动时会通过指定的数据字典选项维护一个内部数据字典，当启动LogMiner时指定 <code>DBMS_LOGMNR.DDL_DICT_TRACKING</code>，LogMiner会自动捕获DDL来更新内部字典，这样即使发生了表结构变动时，也可以正确的解析DDL。<strong>注意：该选项不能和在线数据字典同时使用</strong><br>更多解释参考Oracle文档：<a href="https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sutil/oracle-logminer-utility.html#GUID-56743517-A0C0-4CCD-9D20-2883AFB5683B" target="_blank" rel="noopener">https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sutil/oracle-logminer-utility.html#GUID-56743517-A0C0-4CCD-9D20-2883AFB5683B</a></p>
+</blockquote>
+<p><strong>这一步我选择在线数据字典，什么都不用做，直接进入下一步</strong></p>
+<h4 id="2-添加日志文件"><a href="#2-添加日志文件" class="headerlink" title="2. 添加日志文件"></a>2. 添加日志文件</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"># 查询目前的redol og</span><br><span class="line">SQL&gt; select member from v$logfile;</span><br><span class="line"></span><br><span class="line">MEMBER</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">/opt/oracle/oradata/ORCLCDB/redo03.log</span><br><span class="line">/opt/oracle/oradata/ORCLCDB/redo02.log</span><br><span class="line">/opt/oracle/oradata/ORCLCDB/redo01.log</span><br><span class="line"></span><br><span class="line"># 添加redo log</span><br><span class="line">SQL&gt; EXECUTE DBMS_LOGMNR.ADD_LOGFILE( -</span><br><span class="line">   LOGFILENAME =&gt; &apos;/opt/oracle/oradata/ORCLCDB/redo03.log&apos;, -</span><br><span class="line">   OPTIONS =&gt; DBMS_LOGMNR.NEW);</span><br><span class="line">EXECUTE DBMS_LOGMNR.ADD_LOGFILE( -</span><br><span class="line">   LOGFILENAME =&gt; &apos;/opt/oracle/oradata/ORCLCDB/redo02.log&apos;, -</span><br><span class="line">   OPTIONS =&gt; DBMS_LOGMNR.ADDFILE);</span><br><span class="line">EXECUTE DBMS_LOGMNR.ADD_LOGFILE( -</span><br><span class="line">   LOGFILENAME =&gt; &apos;/opt/oracle/oradata/ORCLCDB/redo01.log&apos;, -</span><br><span class="line">   OPTIONS =&gt; DBMS_LOGMNR.ADDFILE);</span><br></pre></td></tr></table></figure>
+<h4 id="3-START-LOGMNR"><a href="#3-START-LOGMNR" class="headerlink" title="3. START_LOGMNR"></a>3. START_LOGMNR</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 使用在线数据字典进行log解析</span><br><span class="line">SQL&gt; EXECUTE DBMS_LOGMNR.START_LOGMNR(-</span><br><span class="line">OPTIONS =&gt; DBMS_LOGMNR.DICT_FROM_ONLINE_CATALOG);</span><br></pre></td></tr></table></figure>
+<p><strong>然后执行一条INSERT</strong></p>
+<h4 id="4-查询结果"><a href="#4-查询结果" class="headerlink" title="4. 查询结果"></a>4. 查询结果</h4><p>通过查询<code>V$LOGMNR_CONTENTS</code> 获取LogMiner捕获的结果。当执行该视图查询时，LogMiner会按照顺序解析Redo和Archived Log，所有执行时间会有一点慢<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> OPERATION, SQL_REDO, SQL_UNDO</span><br><span class="line"><span class="keyword">FROM</span> V$LOGMNR_CONTENTS</span><br><span class="line"><span class="keyword">WHERE</span> table_name=<span class="string">'TEST_TAB'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>结果如下，可以看到我们刚刚INSERT的SQL</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/ebb53ba4-a675-4c11-842a-0ac1d7aae1b6" alt></p>
+<h3 id="实战"><a href="#实战" class="headerlink" title="实战"></a>实战</h3><p>我们已经知道了迁移的思路和Logminer如何使用，现在可以动手搞一个demo了。</p>
+<p>由于篇幅问题，这里我只讨论思路和我的一些想法。</p>
+<p>完整代码参考👉 <a href="https://github.com/TavenYin/database-cdc/tree/master/oracle-logminer" target="_blank" rel="noopener">https://github.com/TavenYin/database-cdc/tree/master/oracle-logminer</a></p>
+<h4 id="1-整体思路"><a href="#1-整体思路" class="headerlink" title="1. 整体思路"></a>1. 整体思路</h4><p>相关实现思路参考自Debezium</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/e2d408fd-30bf-45c6-a3f3-fed9c117ec71" alt="image.png"></p>
+<p>需要解释一下第四步为什么，发生Redo发生切换时，需要重启Logminer流程，两点原因</p>
+<ul>
+<li>Redo Log 切换后，会生成新的归档，我们需要Add新的归档日志</li>
+<li>长时间开启LogMiner会话，会导致PGA使用量一直上升无法释放，End LogMiner 可以解决这个问题。所以代码逻辑中需要找一个时机去重启LogMiner，而Redo 切换这个时间点确实也挺合适的。</li>
+</ul>
+<hr>
+<p>写到这的时候，我突然有了一个疑问</p>
+<p>我们刚刚已经说过了，只有在查询 <code>V$LOGMNR_CONTENTS</code> 时，LogMiner才会去解析Redo Log，然后动态的生成视图。</p>
+<p>参考上图。如果在第四步和第六步之间，程序检查到没有RedoLog切换准备继续执行。突然插入了大量数据导致Current Redo Log 被<strong>覆盖</strong>（注意必须是已经被覆盖而不是切换）了，此时是不是我们再查询 <code>V$LOGMNR_CONTENTS</code> 岂不是会丢失一部分数据？</p>
+<p>由于start_logminer时会指定，起始和结束SCN，所以即使下次执行时添加了新的Archived Log，由于SCN已经被跨过去了，所以一定不会读这部分数据</p>
+<p>在我做了测试之后发现，如果情况真的如此极端，确实会这样。</p>
+<p>那么Debezium为什么没有考虑这个问题呢？</p>
+<p>个人理解，在生产环境通常Redo Log 不会频繁切换，并且一定会有多个Redo Group。这么短时间内被覆盖的情况几乎不可能发生。</p>
+<hr>
+<h4 id="2-处理-V-LOGMNR-CONTENTS-结果集"><a href="#2-处理-V-LOGMNR-CONTENTS-结果集" class="headerlink" title="2. 处理 V$LOGMNR_CONTENTS 结果集"></a>2. 处理 V$LOGMNR_CONTENTS 结果集</h4><p>最开始在看Debezium源码的时候，没仔细注意这个地方，在自己动手搞一遍之后，发现这个地方的逻辑有点麻烦</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/84afe7d2-f3ef-40dc-ba62-bc638fab1394" alt></p>
+<p>V$LOGMNR_CONTENTS 每一行可能是事务的提交、回滚，DDL，DML</p>
+<p>上面提到了一个 TransactionalBuffer是什么？</p>
+<p>我们在读取 V$LOGMNR_CONTENTS 会发生如下图的情况，因为每次只从startScn 读取到 当前Scn。而这中间可能发生的情况是，事务并没有Commit，但是我们拿到了其中一部分的DML，我们并不能确定这些DML是不是要Commit，所以需要将这些<strong>“一半”</strong>的事务暂时缓存在内存中</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/5b8f28dd-68d9-4e71-9002-e02f88e2fbc9" alt></p>
+<blockquote>
+<p>其实在调用 <code>DBMS_LOGMNR.START_LOGMNR</code> 时，可以指定一个选项 <code>COMMITTED_DATA_ONLY</code>，仅读出已提交的事务。这样就不必要这么麻烦的处理结果集了。但是为什么不选择 <code>COMMITTED_DATA_ONLY</code>？使用该策略会一直等待事务提交才会响应客户端，这很容易造成 <strong>“Out of Memory”</strong>，所以这个策略不适合我们的程序。</p>
+</blockquote>
+<hr>
+<h4 id="3-迁移进程宕机处理"><a href="#3-迁移进程宕机处理" class="headerlink" title="3. 迁移进程宕机处理"></a>3. 迁移进程宕机处理</h4><p>数据迁移必定是一个漫长的过程，如果在执行中遇到什么意外，导致Java进程挂了，那么一切都要从头开始吗？</p>
+<p>如果我们能确定某个SCN之前的所有记录都已经被处理了，那么下次重启时从这个SCN开始处理即可</p>
+<p>两处可以确定之前SCN已经被全部处理的地方，代码如下：</p>
+<p>a. 当前TransactionalBuffer中没有数据，代表<code>END_SCN</code>之前所有的事务都已经被提交了</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d7f0105a-f529-43a0-9f09-4faa67c2e677" alt></p>
+<p> b. 提交事务时，如果当前要提交的事务的<code>Start_SCN</code> 早于TransactionalBuffer中的所有事务</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/96688b3b-2146-42e8-ad52-12e1c2537d9b" alt></p>
+<h4 id="4-SQL解析"><a href="#4-SQL解析" class="headerlink" title="4. SQL解析"></a>4. SQL解析</h4><p>如果你想将Oracle的数据同步到其他数据库（包含NoSQL）的话，最好的办法是将SQL解析成结构化的对象，让下游服务去消费这些对象。</p>
+<p>Debezium的做法，我还没抽出空研究。目前的解决方法是用<code>com.alibaba.druid.sql.SQLUtils</code>，这个类可以将SQL解析成结构化对象，我们再对这些对象进行一些处理，即可让下游服务消费了。</p>
+<h3 id="DEMO"><a href="#DEMO" class="headerlink" title="DEMO"></a>DEMO</h3><p>运行效果如下</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/f4b9c309-0892-4a05-863d-53012b1e688c" alt="DEMO运行效果"></p>
+<p>GitHub 👉 <a href="https://github.com/TavenYin/database-cdc/tree/master/oracle-logminer" target="_blank" rel="noopener">https://github.com/TavenYin/database-cdc/tree/master/oracle-logminer</a></p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ul>
+<li>Oracle Redo : <a href="https://docs.oracle.com/cd/B28359_01/server.111/b28310/onlineredo001.htm" target="_blank" rel="noopener">https://docs.oracle.com/cd/B28359_01/server.111/b28310/onlineredo001.htm</a></li>
+<li>Oracle Archived : <a href="https://docs.oracle.com/cd/B28359_01/server.111/b28310/archredo001.htm" target="_blank" rel="noopener">https://docs.oracle.com/cd/B28359_01/server.111/b28310/archredo001.htm</a></li>
+<li>Oracle Flashback : <a href="https://docs.oracle.com/cd/E11882_01/appdev.112/e41502/adfns_flashback.htm" target="_blank" rel="noopener">https://docs.oracle.com/cd/E11882_01/appdev.112/e41502/adfns_flashback.htm</a></li>
+<li>LogMiner : <a href="https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sutil/oracle-logminer-utility.html" target="_blank" rel="noopener">https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sutil/oracle-logminer-utility.html</a></li>
+<li>Debezium Oracle Connector : <a href="https://debezium.io/documentation/reference/connectors/oracle.html" target="_blank" rel="noopener">https://debezium.io/documentation/reference/connectors/oracle.html</a></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Oracle/" rel="tag"># Oracle</a>
+          
+            <a href="/tags/LogMiner/" rel="tag"># LogMiner</a>
+          
+            <a href="/tags/数据库迁移技术/" rel="tag"># 数据库迁移技术</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/7ec53704.html" rel="next" title="Kafka Connect-入门">
+                <i class="fa fa-chevron-left"></i> Kafka Connect-入门
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">46</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">51</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://gitee.com/yintianwen7" target="_blank" title="Gitee">
+                      
+                        <i class="fa fa-fw fa-git"></i>Gitee</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#LogMiner-是什么"><span class="nav-number">1.</span> <span class="nav-text">LogMiner 是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LogMiner-可以做什么？"><span class="nav-number">2.</span> <span class="nav-text">LogMiner 可以做什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Oracle-LogMiner-数据迁移的原理是什么？"><span class="nav-number">3.</span> <span class="nav-text">Oracle LogMiner 数据迁移的原理是什么？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装与配置"><span class="nav-number">4.</span> <span class="nav-text">安装与配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#小试牛刀"><span class="nav-number">5.</span> <span class="nav-text">小试牛刀</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-构建数据字典"><span class="nav-number">5.1.</span> <span class="nav-text">1. 构建数据字典</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-添加日志文件"><span class="nav-number">5.2.</span> <span class="nav-text">2. 添加日志文件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-START-LOGMNR"><span class="nav-number">5.3.</span> <span class="nav-text">3. START_LOGMNR</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-查询结果"><span class="nav-number">5.4.</span> <span class="nav-text">4. 查询结果</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实战"><span class="nav-number">6.</span> <span class="nav-text">实战</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-整体思路"><span class="nav-number">6.1.</span> <span class="nav-text">1. 整体思路</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-处理-V-LOGMNR-CONTENTS-结果集"><span class="nav-number">6.2.</span> <span class="nav-text">2. 处理 V$LOGMNR_CONTENTS 结果集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-迁移进程宕机处理"><span class="nav-number">6.3.</span> <span class="nav-text">3. 迁移进程宕机处理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-SQL解析"><span class="nav-number">6.4.</span> <span class="nav-text">4. SQL解析</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DEMO"><span class="nav-number">7.</span> <span class="nav-text">DEMO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
