@@ -10,10 +10,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -177,14 +177,14 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>锁</tag>
+        <tag>Redis</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
-        <tag>Redis</tag>
+        <tag>分布式</tag>
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
-        <tag>分布式</tag>
-        <tag>锁</tag>
       </tags>
   </entry>
   <entry>
@@ -309,9 +309,9 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -335,9 +335,9 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>并发</tag>
         <tag>设计模式</tag>
       </tags>
   </entry>
@@ -363,8 +363,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>MySQL</tag>
+        <tag>并发</tag>
         <tag>锁</tag>
       </tags>
   </entry>
@@ -577,8 +577,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>MySQL</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
 </search>
