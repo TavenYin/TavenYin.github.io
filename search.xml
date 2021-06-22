@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[深入理解 Sentinel 中的限流算法]]></title>
+    <url>%2Fpost%2F690c857.html</url>
+    <content type="text"><![CDATA[最近在学习 Sentinel，深入学习了源码之后分享一下心得 Sentinel 版本1.8.0 固定窗口算法先介绍一下最简单的限流算法 每个窗口都有一个计数器（counter）用于统计流量，如果 counter + 本次申请的请求数 &gt; 预设的 QPS，则拒绝请求。 固定窗口很简单，但是也有很大的问题 假设我们规定 QPS 不能超过 100，如上图所示 r1 和 r2 两个时间点分别来了 60 个请求， QPS 已经大于 100 了。此时应该触发限流了，但是固定窗口算法傻傻的只关注自己窗口的流量，感知不到 QPS 已经超了 滑动窗口算法 该算法将单位时间切成了多个窗口，每次计算 QPS 时，计算 当前窗口 + 过去几个窗口 的流量总和，这样就避免了固定窗口的问题（具体使用几个窗口，取决于窗口大小和单位时间大小。例如上图，每个窗口大小为 500 ms，以 1 s 为单位时间做限流，每次使用 current + last 即可） 算法实现细节思考理解算法思路之后，接下来要思考如何实现这个算法了 首先我们需要有一个上图中的时间轴，来记录时间窗口，可以通过数组来实现这个时间轴。 时间轴有了，我们再来考虑一下时间窗口。 每个时间窗口肯定要有一个线程安全的计数器以及当前窗口对应的时间 12345678910// 时间轴List&lt;Window&gt; timeline = new ArrayList&lt;&gt;();// 每个窗口的大小int windowTime;// 时间窗口class Window &#123; Timestamp startTime; AtomicInteger counter;&#125; 但是如果仔细一想，还是存在一些问题的 由于时间是会一直增长的，那我们的数组怎么办？也要跟着时间无限的增大吗？ 旧的时间窗口（例如几秒之前的）在之后的计算不会再用到了，如何清理这些无用的窗口？ Sentinel 中滑动窗口算法如何实现的带着上述的问题与思考来看下 Sentinel 中是如何实现的 LeapArraySentinel 中滑动窗口算法的核心类，首先来了解一下他的核心成员变量 123456789101112131415161718192021222324public abstract class LeapArray&lt;T&gt; &#123; // 要统计的单位时间大小，例如计算QPS时，为1000 protected int intervalInMs; // 样本数量 protected int sampleCount; // 窗口大小 该值 = intervalInMs / sampleCount protected int windowLengthInMs; // 存储时间窗口的数组 protected final AtomicReferenceArray&lt;WindowWrap&lt;T&gt;&gt; array; public LeapArray(int sampleCount, int intervalInMs) &#123; AssertUtil.isTrue(sampleCount &gt; 0, "bucket count is invalid: " + sampleCount); AssertUtil.isTrue(intervalInMs &gt; 0, "total time interval of the sliding window should be positive"); AssertUtil.isTrue(intervalInMs % sampleCount == 0, "time span needs to be evenly divided"); this.windowLengthInMs = intervalInMs / sampleCount; this.intervalInMs = intervalInMs; this.sampleCount = sampleCount; this.array = new AtomicReferenceArray&lt;&gt;(sampleCount); &#125; &#125; 单机限流在统计 QPS 时，默认 sampleCount = 2，intervalInMs = 1000，windowLengthInMs = 500 LeapArray#calculateTimeIdx大体思路相同，同样是利用一个数组实现时间轴，每个元素代表一个时间窗口 Sentinel 中 数组长度是固定的，通过方法 LeapArray#calculateTimeIdx 来 确定时间戳在数组 中的位置 （找到时间戳对应的窗口位置） 怎么理解这个方法呢？ 我们把数据带入进去，假设 windowLengthInMs = 500 ms （每个时间窗口大小是 500 ms） 如果 timestamp 从 0 开始的话，每个时间窗口为 [0,500) [500,1000) [1000,1500) … 这时候先不考虑 timeId % array.length() ，也不考虑数组长度。假设当前 timeMillis = 601，将数值代入到 timeMillis / windowLengthInMs 其实就可以确定出当前的 timestamp 对应的时间窗口在数组中的位置了 由于数组长度是固定的，所以再加上求余数取模来确定时间窗在数组中的位置 LeapArray#currentWindow先来看一下 Sentinel 中 Window 的结构，基本和我们上面想的一致，计数器使用了泛型，可以更灵活12345678910111213141516171819public class WindowWrap&lt;T&gt; &#123; /** * Time length of a single window bucket in milliseconds. */ private final long windowLengthInMs; /** * Start timestamp of the window in milliseconds. */ private long windowStart; /** * Statistic data. */ private T value; // 省略。。。&#125; 继续说 currentWindow，该方法根据传入的 timestamp 找到 或者 创建 这个时间戳对应的 Window 这个方法源码中注释很多，我删除了部分注释1234567891011121314151617181920212223242526272829303132333435363738394041424344454647public WindowWrap&lt;T&gt; currentWindow(long timeMillis) &#123; if (timeMillis &lt; 0) &#123; return null; &#125; int idx = calculateTimeIdx(timeMillis); // Calculate current bucket start time. long windowStart = calculateWindowStart(timeMillis); /* * Get bucket item at given time from the array. * * (1) Bucket is absent, then just create a new bucket and CAS update to circular array. * (2) Bucket is up-to-date, then just return the bucket. * (3) Bucket is deprecated, then reset current bucket and clean all deprecated buckets. */ while (true) &#123; WindowWrap&lt;T&gt; old = array.get(idx); if (old == null) &#123; WindowWrap&lt;T&gt; window = new WindowWrap&lt;T&gt;(windowLengthInMs, windowStart, newEmptyBucket(timeMillis)); if (array.compareAndSet(idx, null, window)) &#123; // Successfully updated, return the created bucket. return window; &#125; else &#123; // Contention failed, the thread will yield its time slice to wait for bucket available. Thread.yield(); &#125; &#125; else if (windowStart == old.windowStart()) &#123; return old; &#125; else if (windowStart &gt; old.windowStart()) &#123; if (updateLock.tryLock()) &#123; try &#123; // Successfully get the update lock, now we reset the bucket. return resetWindowTo(old, windowStart); &#125; finally &#123; updateLock.unlock(); &#125; &#125; else &#123; // Contention failed, the thread will yield its time slice to wait for bucket available. Thread.yield(); &#125; &#125; else if (windowStart &lt; old.windowStart()) &#123; // Should not go through here, as the provided time is already behind. return new WindowWrap&lt;T&gt;(windowLengthInMs, windowStart, newEmptyBucket(timeMillis)); &#125; &#125;&#125; 方法逻辑分析如下： 首先要做的两件事 计算 timestamp 在数组中的位置，就是我们上文说的 calculateTimeIdx 计算 timestamp 的 windowStart（窗口开始时间），通过 timeMillis - timeMillis % windowLengthInMs，这个值在后边会用到 然后进入一个 while(true) 循环， 通过 WindowWrap&lt;T&gt; old = array.get(idx) 找出对应的窗口，接下来就是三种情况了 old == null 这个时候代表数组中还没有这个 window，创建这个 window 加入到数组中（由于此时可能会有多个线程同时添加数组元素，所以一定要保证线程安全，所以这里使用的数组为 AtomicReferenceArray），添加成功后返回新建的 window windowStart == old.windowStart() window 已经存在了，直接返回即可 windowStart &gt; old.windowStart() 代表数组中的元素已经至少是 25s 之前的了，重置当前窗口的 windowStart 和 计数器，这个操作同样也是一个多线程操作，所以使用了 updateLock.tryLock()。 仔细看了代码后，我提出了一个问题。我觉得这个地方并不能一定保证能锁住。会不会出现两个线程同时判断需要更新，由于一个线程很快执行成功并释放了锁，第二个线程也成功获取到 Lock，会执行多次 resetWindow。我认为需要再 tryLock 之后再判断一下执行条件，目前已经给 Sentinel 提交了 Issue windowStart &lt; old.windowStart() 通常情况下不会走到这个逻辑分支，上面源码的注释也是这样解释的 LeapArray#values上文中提到过，计算流量时具体使用几个窗口，取决于窗口大小和单位时间大小 该方法的作用通过传入一个时间戳，找出本次计算所需的所有时间窗口 123456789101112131415161718192021 public List&lt;T&gt; values(long timeMillis) &#123; if (timeMillis &lt; 0) &#123; return new ArrayList&lt;T&gt;(); &#125; int size = array.length(); List&lt;T&gt; result = new ArrayList&lt;T&gt;(size); for (int i = 0; i &lt; size; i++) &#123; WindowWrap&lt;T&gt; windowWrap = array.get(i); if (windowWrap == null || isWindowDeprecated(timeMillis, windowWrap)) &#123; continue; &#125; result.add(windowWrap.value()); &#125; return result; &#125; public boolean isWindowDeprecated(long time, WindowWrap&lt;T&gt; windowWrap) &#123;// intervalInMs 在单机限流计算QPS时默认为 1000(ms) return time - windowWrap.windowStart() &gt; intervalInMs; &#125; values 的逻辑没什么可说的，遍历数组将时间符合的窗口加入到 List 中 重点看一下 isWindowDeprecated 这个方法 还是像上面那样把数值带进去。每个窗口大小为 500 ms，例如 timestamp 为 1601，这个 timestamp 对应的 windowStart 为 1500，此时 (1601 - 1500 &gt; 1000) = false 即这个窗口是有效的，再往前推算，上一个窗口 windowStart 为 1000 也是有效的。再往前推算，或者向后推算都是无效的窗口。 intervalInMs 我是这样理解的，以多长的时间段作为单位时间来限流。即可以以 1s 为一个时间段来做限流，也可以以 60s 为一个时间段来限流。 Sentinel 限流思路在理解了 LeapArray#currentWindow 和 LeapArray#values 方法的细节之后，其实我们就可以琢磨出限流的实现思路了 首先根据当前时间戳，找到对应的几个 window，根据 所有 window 中的流量总和 + 当前申请的流量数 决定能否通过 如果不能通过，抛出异常 如果能通过，则对应的窗口加上本次通过的流量数 Sentinel 限流实现Sentinel 基本也是这个思路，只不过逻辑复杂一些，这里贴出几处代码，感兴趣的同学可以自己 debug 一下 Sentinel 限流检查根据 Sentinel 文档中的解释，我们可以知道负责限流的类为 FlowSlot，FlowSlot 会使用 FlowRuleChecker 来检查当前资源是否需要限流 FlowSlot#entry FlowRuleChecker#checkFlow 根据 FlowRule 的设定来做限流检查，这中间我省略了几段代码，默认情况没有设置 ControlBehavior 会使用 DefaultController#canPass 做限流检查。如下图，通过判断 当前流量数 + 申请的数量 是否大于预设的数量，来决定是否限流 注：当使用 SphU.entry 时 prioritized = false，使用 SphU.entryWithPriority 时 prioritized = true。node.tryOccupyNext 的含义：如果想占用未来的时间窗口令牌，需要等待多久（上图中的waitInMs）。如果小于规定的超时时间，则记录正在等待的请求数，然后执行 sleep(waitInMs)，外层捕获到 PriorityWaitException 会自己处理掉，然后执行用户逻辑，用户完全无感知。 通过上图 avgUsedTokens 可以看到，当 Rule 的 grade 为 FLOW_GRADE_QPS 时，会调用 node.pass()。这里调用的具体实现为 StatisticNode#passQps，如下图 rollingCounterInSecond.getWindowIntervalInSec() 计算 QPS 时为 1 秒 rollingCounterInSecond.pass() 计算 QPS 时，最多返回两个窗口的通过请求数（currentWindow + lastWindow） rollingCounterInSecond#pass 首先先尝试是否需要创建当前的时间窗口，然后找到相关的窗口，计算流量总和。 Sentinel 请求记录代码位置 StatisticSlot#entry，fireEntry 会根据我们配置的规则进行检查（例如上述的限流）。 如果检查没有抛出异常，则记录线程数和申请的请求数（限流检查依赖的数据就是这里记录的）。 集群限流集群限流有什么用在没有集群限流之前，如果想把整个服务的 QPS 限制在某个值。举个例子现在某 Server 有十个实例，我们希望总 QPS 不超过 100，这时我们的做法是把每个实例的 QPS 设置为 10。 在理想情况下，这样做可以将 QPS 控制在 100。但是如果每台 Server 分配到的流量不均匀。这可能会导致总量在没达到 100 的时候，某些 Server 就开始限流了。 这种情况就需要 Sentinel 的集群限流出场了。 集群限流原理由于篇幅限制，我们这里不讨论如何搭建集群限流，只是来说说 Sentinel 如何在这一基础上做的集群限流。 思路很简单，选出一个 Token Server。在开启集群限流后，所有的 Client 在需要限流时，询问 Token Server，Server 决定当前请求是否限流。具体的实现细节与单机限流略有不同，但是核心的算法还是使用的 LeapArray 这里也是给出几处源码位置，感兴趣的同学自行阅读一下 Client 端根据 Rule 决定本次使用本地限流还是集群限流，FlowRuleChecker#canPassCheck Server 端，DefaultTokenService#requestToken 并发下限流的问题在完整的阅读完单机和集群的限流代码之后，发现了一个问题，限流流程可以简化为如下1234567891011121314// 伪代码// 最大QPSint maxCount;// 当前申请的流量数int aquireCount;int passQps = getPassQPS();if (passQps + aquireCount &lt;= maxCount) &#123; addPass(aquireCount);&#125; else &#123; // 限流处理&#125; 由于没有并发控制，并发场景下会出现，多个线程同时满足 passQps + aquireCount &lt;= maxCount，然后增加流量统计，这样的话，没法保证一定将 QPS 控制在 maxCount，并发的情况下会出现实际流量超出预设 QPS 的情况。 这肯定不是个Bug。这里没有并发控制可能是出于性能考虑，在性能和准确度可以接受的情况下做了一个折中 所以在使用时，如果实际 QPS 高于预设值，可能是并发导致的 demo 单机限流： https://github.com/TavenYin/taven-springcloud-learning/blob/master/sentinel-example/src/main/java/com/github/taven/limit/SentinelExample.java 集群限流：https://github.com/TavenYin/taven-springcloud-learning/blob/master/sentinel-example/src/main/java/com/github/taven/limit/SentinelClusterEmbedded.java]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>源码</tag>
+        <tag>分布式</tag>
+        <tag>Sentinel</tag>
+        <tag>限流</tag>
+        <tag>微服务</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[聊聊 Java GC 算法]]></title>
     <url>%2Fpost%2F1e4a5faa.html</url>
     <content type="text"><![CDATA[Java 和 C++ 之间有一堵由内存动态分配和垃圾回收技术所围成的高墙，墙外面的人想进去，墙里面的人却想出来 今天来聊聊 Java GC（Garbage Collection，垃圾回收）中的常见算法 引用与GC的关系正题开始前，先来了解一下 Java 中的引用。对象使用不同的引用类型，决定 GC 发生时是否会回收它 引用类型 特点 强引用（Strong Reference） Java中的默认引用类型。例如Object obj = new Object()，只要强引用存在，对象永远不会被回收 软引用（Soft Reference） 内存足够时，软引用不会被回收。只有当系统要发生内存溢出时，才会被回收。适合用于缓存场景 弱引用（Weak Reference） 只要发生垃圾回收，弱引用的对象就会被回收 虚引用（Phantom Reference） 一个对象有虚引用的存在不会对生存时间都构成影响，也无法通过虚引用来获取对一个对象的真实引用。唯一的用处：能在对象被GC时收到系统通知 如何判断对象是否可以被回收？在GC开始之前，首先要做的事就是确定哪些对象『活着』，哪些对象『已死』 常见的两种算法用于判断该对象是否可以被回收 引用计数算法：每个对象中添加引用计数器。每当对象被引用，引用计数器就会加 1；每当引用失效，计数器就会减 1。当对象的引用计数器的值为 0 时，就说明该对象不再被引用，可以被回收了。强调一点，虽然引用计数算法的实现简单，判断效率也很高，但它存在着对象之间相互循环引用的问题（所以在后来的JVM版本中已经不采用这种算法了）。 可达性分析算法：GC Roots 是该算法的基础，GC Roots 是所有对象的根对象。这些对象作为正常对象的起始点，在垃圾回收时，会从这些 GC Roots 开始向下搜索，当一个对象到 GC Roots 没有任何引用链相连时，就证明此对象不再被引用。目前 HotSpot 虚拟机采用的就是这种算法。 可以作为 GC Roots 的对象： 虚拟机栈中引用的对象 方法区中类静态属性引用的对象 方法区中常量引用的对象 本地方法栈中 JNI（Native 方法）引用的对象 Java 虚拟机中内部的引用 synchronized 持有的对象 JMXBean、JVMTI 中注册的回调、本地代码缓存 除此之外，不同的垃圾回收器可能还会加入一些『临时的』对象共同构建 GC Roots 基础的 GC 算法标记-清除算法 （mark-sweep）如下图所示，该算法分为『标记』和『清除』两个阶段 从 GC Roots 出发标记出存活的对象，然后遍历堆清除未被标记的对象 最基础的收集算法，标记-清除的效率中等，缺点也比较明显：会产生内存碎片 复制算法（copying）将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块内存用完，需要进行垃圾收集时，就将存活者的对象复制到另一块上面，然后将第一块内存全部清除 相比较『标记-清除』不会有内存碎片的问题，但每次只使用一半的内存，内存利用率很低。当内存中存活的对象较多时，会进行大量的复制操作，效率会较低（对象的复制也是有成本的，需要复制的对象越多、越大，复制带来的代价也就越大）。适用于存活率低的情况 标记-整理算法（mark-compact）和『标记-清除』算法有点类似，从 GC Roots 出发标记出存活的对象，然后是整理阶段，将存活移动到一端。整理阶段结束后我们可以知道一个临界点，另一端的内存空间就可以被重新分配了 该算法的优点：不像复制算法那样会浪费内存空间，也不会产生内存碎片。 写到这时，我很想知道『标记-整理』的效率如何。一番搜索后，发现该算法是这三种算法中效率最低的，因为『整理』这个过程会遍历整个堆三次，具体实现思路如下 『标记-整理』以 lisp2 算法为例，实现思路如下 标记阶段：首先从 GC Roots 出发，标记出所有存活的对象 设置 forwarding 指针：每个对象头中都有一个forwarding指针，指向该对象整理后的位置。遍历整个堆计算存活对象的 forwarding 更新指针：遍历整个堆，根据 forwarding 更新 GC Roots 指针以及所有存活对象的子对象的指针，将指针指向新的位置 移动对象：遍历整个堆，根据 forwarding 移动对象并且清除对象中的标记 聊聊我个人的理解，为什么2,3,4一定要遍历整个堆？都是针对存活对象的操作，直接遍历 GC Roots 不行吗？ 设置 forwarding 阶段：一定要顺序遍历整个堆。如上图所示，如果仅是遍历 GC Roots 的话，你没法知道A这个区域是否可以覆盖 更新指针阶段：我觉得这个阶段仅遍历 GC Roots 的话，确实可行 移动对象阶段：由于 GC Roots 指针已经全部指向新的位置了，只能遍历整个堆 写到这，我又想为什么一定要三个步骤搞这么复杂，直接移动对象不行吗？ 根据上面的理解，一定要遍历整个堆来确定存活的对象该移动到哪。就现有的结构来看，如果直接移动，子对象的指针还好说可以处理，GC Roots 中的指针就没法更新了 关于lisp2 实现的更多细节可以参考下这篇Blog 『gc-标记整理算法的两种实现』 小结总结下上述三种基础GC算法的优缺点 维度 标记-清除 标记-整理 复制算法 速度 中等 最慢 最快 时间开销 mark阶段与存活对象的数量成正比，sweep阶段与整堆大小成正比 mark阶段与存活对象的数量成正比，compact阶段与整堆大小成正比，与存活对象的大小成正比 与存活对象大小成正比 空间开销 少（但会堆积碎片） 少（不堆积碎片） 通常需要存活对象的2倍大小（不堆积碎片） 移动对象 否 是 是 分代回收理论垃圾回收器都不会只选择一种算法，JVM根据对象存活周期的不同，将内存划分为几块。一般是把堆分为新生代和老年代，根据年代的特点来选择最佳的收集算法。 HotSpot 中大部分垃圾回收器都采用分代回收的思想 新生代：复制算法 老年代：标记-清除 / 标记-整理 / 或者两者同时使用 堆大小=新生代+老年代（默认分别占堆空间为1/3、2/3），新生代又被分为Eden、from survivor (S0)、to survivor (S1)，默认分配比例为 8:1:1 对象的分配对象的分配通常在 Eden 中（需要大量连续内存空间的 Java 对象，如很长的字符串或数据可以直接进入老年代，由 -XX:PretenureSizeThreshold 决定） 新生代的回收当 Eden 区满后，会触发 Young GC（新生代回收），复制 Eden 区和 S0 区中存活的对象到 S1 或者老年代（其中到达年龄的会被放入老年代，未到达年龄的放入 S1 区） 每经历一次 Young GC，survivor 区中对象年龄 +1 然后清空 Eden 区和 S0 区，交换 S0 与 S1 的名字 若存活对象大于 S1 区容量，则会被直接放入老年代。若打开了自适应（-XX:+AdaptiveSizePolicy），GC会自动重新调整新生代大小 老年代的回收在发生 Full GC 或者 Old GC 时，会根据不同的垃圾回收器或者情况选择使用 标记-清除 / 标记-整理 来进行回收 除了 Young GC 之外，常见的还有 Full GC（新生代、老生代、元空间或永久代的回收） Old GC（只有 CMS 有这个模式） Mixed GC（只有 G1 有这个模式） 通常情况下 Full GC 的触发条件，当准备要触发一次 Young GC时，如果发现统计数据说之前 Young GC 的平均晋升大小比目前老年代剩余的空间大，则不会触发 Young GC 而是转为触发 Full GC 小结由于新生代的特点是大多数对象都是「朝生夕死」的，存活率低，所以非常适合复制算法。而 survivor 区存在的意义是为了确保「朝生夕死」的对象不会轻易进入老年代，当对象的年龄满足（经历了多次 Young GC）才会进入老年代。 又到了提问环节，为什么分代回收中需要有两个 survivor 区，一个不行吗？ 答案是不行。假设只有一个 survivor，Eden 回收后存活的对象进入了 survivor。那么 survivor 区可以被回收的对象该怎么处理？难道要用标记清除和标记整理？那可太没有必要了，所以划分出两个 survivor 区，将新生代的复制算法贯彻到底 参考『深入理解Java虚拟机』 『极客时间 - Java性能调优实战』 『Java-GC 垃圾收集算法』 『gc-标记整理算法的两种实现』 『Mark-compact algorithm - Wikipedia』 『为什么新生代内存需要有两个Survivor区』 『Major GC和Full GC的区别是什么？触发条件呢？ - RednaxelaFX的回答 - 知乎』 『关于JVM垃圾搜集算法（标记-整理算法与复制算法）的效率？ - RednaxelaFX的回答 - 知乎』]]></content>
@@ -161,7 +177,6 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>锁</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
@@ -169,6 +184,7 @@
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
         <tag>分布式</tag>
+        <tag>锁</tag>
       </tags>
   </entry>
   <entry>
@@ -293,9 +309,9 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -319,9 +335,9 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
+        <tag>并发</tag>
         <tag>设计模式</tag>
       </tags>
   </entry>
@@ -347,8 +363,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>MySQL</tag>
         <tag>并发</tag>
+        <tag>MySQL</tag>
         <tag>锁</tag>
       </tags>
   </entry>
@@ -561,8 +577,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>MySQL</tag>
         <tag>并发</tag>
+        <tag>MySQL</tag>
       </tags>
   </entry>
 </search>
