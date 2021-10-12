@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Java,微服务,Opentracing,链路追踪,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="链路追踪的作用当系统架构从单机转变为微服务后，我们的一次后端请求，可能历经了多个服务才最终响应到客户端。如果请求按照预期正确响应还好，万一在调用链的某一环节出现了问题，排查起来是很麻烦的。但是如果有链路追踪的话，就容易很多了。 可以通过链路埋点，记录请求链中所有重要的步骤，例如与哪些数据库做了交互，调用了哪些下游服务，下游服务又与哪些数据库做了交互，又调用了哪些下游服务… 下图是 jaeger U">
+<meta name="keywords" content="Java,微服务,Opentracing,链路追踪">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Opentracing 链路追踪实战">
+<meta property="og:url" content="https://yintianwen.top/post/8966d8dd.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="链路追踪的作用当系统架构从单机转变为微服务后，我们的一次后端请求，可能历经了多个服务才最终响应到客户端。如果请求按照预期正确响应还好，万一在调用链的某一环节出现了问题，排查起来是很麻烦的。但是如果有链路追踪的话，就容易很多了。 可以通过链路埋点，记录请求链中所有重要的步骤，例如与哪些数据库做了交互，调用了哪些下游服务，下游服务又与哪些数据库做了交互，又调用了哪些下游服务… 下图是 jaeger U">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/252560f7-ea72-4d6f-aab5-e08b30e5a460">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c6bc6e83-355a-4ae4-a890-2d9ae5a5be4c">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c9b07414-b152-4ee4-b29f-a634f53f825c">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8e6b90e7-8052-4de4-b7a6-962c459b9ab8">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/14d27eb1-7e2b-4909-90cc-8217e9bf3c0d">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d046bae5-fe3a-41a4-a736-7829c0a6181e">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/cffbf008-0453-4b13-ae6b-af4dba9d8a8e">
+<meta property="og:updated_time" content="2021-10-12T14:48:11.035Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Opentracing 链路追踪实战">
+<meta name="twitter:description" content="链路追踪的作用当系统架构从单机转变为微服务后，我们的一次后端请求，可能历经了多个服务才最终响应到客户端。如果请求按照预期正确响应还好，万一在调用链的某一环节出现了问题，排查起来是很麻烦的。但是如果有链路追踪的话，就容易很多了。 可以通过链路埋点，记录请求链中所有重要的步骤，例如与哪些数据库做了交互，调用了哪些下游服务，下游服务又与哪些数据库做了交互，又调用了哪些下游服务… 下图是 jaeger U">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/252560f7-ea72-4d6f-aab5-e08b30e5a460">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/8966d8dd.html">
+
+
+
+
+
+  <title>Opentracing 链路追踪实战 | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">Hello World</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/8966d8dd.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Opentracing 链路追踪实战</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-10-12T00:00:00+08:00">
+                2021-10-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="链路追踪的作用"><a href="#链路追踪的作用" class="headerlink" title="链路追踪的作用"></a>链路追踪的作用</h3><p>当系统架构从单机转变为微服务后，我们的一次后端请求，可能历经了多个服务才最终响应到客户端。如果请求按照预期正确响应还好，万一在调用链的某一环节出现了问题，排查起来是很麻烦的。但是如果有链路追踪的话，就容易很多了。</p>
+<p>可以通过链路埋点，记录请求链中所有重要的步骤，例如与哪些数据库做了交互，调用了哪些下游服务，下游服务又与哪些数据库做了交互，又调用了哪些下游服务…</p>
+<p>下图是 jaeger UI 为例，每次链路追踪都会产生一个唯一的 TraceId，通过该 Id 可以查看请求链路的状态</p>
+<ul>
+<li><p>下游服务可以正常访问时</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/252560f7-ea72-4d6f-aab5-e08b30e5a460" alt="下游服务可以正常访问"></p>
+</li>
+</ul>
+<ul>
+<li><p>RestTemplate 无法访问下游服务时</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c6bc6e83-355a-4ae4-a890-2d9ae5a5be4c" alt="无法访问下游服务时"></p>
+</li>
+</ul>
+<p>当有了链路追踪之后。我们可以清楚的看到问题出在哪。</p>
+<h3 id="什么是-Opentracing"><a href="#什么是-Opentracing" class="headerlink" title="什么是 Opentracing"></a>什么是 Opentracing</h3><p>Opentracing 制定了一套链路追踪的 API 规范，支持多种编程语言。虽然OpenTracing不是一个标准规范，但现在大多数链路跟踪系统都在尽量兼容OpenTracing</p>
+<p>使用 Opentracing 时，还需要集成实现该规范的链路追踪系统，例如我们的项目正在使用 Jaeger，本文也同样以 Jaeger 为例</p>
+<h3 id="Opentracing-核心接口"><a href="#Opentracing-核心接口" class="headerlink" title="Opentracing 核心接口"></a>Opentracing 核心接口</h3><ul>
+<li><p>Tracer：用于创建 Span，以及跨进程链路追踪</p>
+</li>
+<li><p>Span：Tracer 中的基本单元，上图中每一个蓝色或者黄色的块都是一个 Span。Span 包含的属性有 tag，log，SpanContext，BaggageItem</p>
+</li>
+<li><p>SpanContext：Span 上下文，用于跨进程传递 Span，以及数据共享</p>
+</li>
+<li><p>ScopeManager：用于获取当前上下文中 Span，或者将 Span 设置到当前上下文</p>
+</li>
+<li><p>Scope：与 ScopeManager 配合使用，我们在后面的例子中会说明</p>
+</li>
+</ul>
+<h3 id="快速开始"><a href="#快速开始" class="headerlink" title="快速开始"></a>快速开始</h3><p>首先，我们先部署一个 jaeger 服务。关于 jaeger 服务的更多细节，这里不多说了，各位读者可以自行去 jaeger 官网阅读</p>
+<p>执行如下命令，启动 jaeger 服务<br><code>docker run -d --name jaeger -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 -p 5775:5775/udp -p 6831:6831/udp -p 6832:6832/udp -p 5778:5778 -p 16686:16686 -p 14268:14268 -p 14250:14250 -p 9411:9411 jaegertracing/all-in-one:1.23</code></p>
+<p>引入 maven 依赖<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- guava 依赖，与 jaeger 无关 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.google.guava<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>guava<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>30.1.1-jre<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.opentracing<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>opentracing-api<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>0.33.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.jaegertracing<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jaeger-client<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>1.6.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<p>记录一个简单的链路<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> com.google.common.collect.ImmutableMap;</span><br><span class="line"><span class="keyword">import</span> io.jaegertracing.Configuration;</span><br><span class="line"><span class="keyword">import</span> io.jaegertracing.internal.JaegerTracer;</span><br><span class="line"><span class="keyword">import</span> io.opentracing.Span;</span><br><span class="line"><span class="keyword">import</span> io.opentracing.Tracer;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.time.LocalDateTime;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GettingStarter</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 指定服务名，初始化 Tracer</span></span><br><span class="line">        Tracer tracer = initTracer(<span class="string">"starter-service"</span>);</span><br><span class="line">        <span class="comment">// 指定 Span 的 operationName</span></span><br><span class="line">        Span span = tracer.buildSpan(<span class="string">""</span>)</span><br><span class="line">                <span class="comment">// 指定当前 Span 的 Tag， key value 格式</span></span><br><span class="line">                .withTag(<span class="string">"env"</span>, <span class="string">"local"</span>)</span><br><span class="line">                .start();</span><br><span class="line"></span><br><span class="line">        span.setTag(<span class="string">"system"</span>, <span class="string">"windows"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// log 也是 key value 格式，默认 key 为 event</span></span><br><span class="line">        span.log(<span class="string">"create first Span"</span>);</span><br><span class="line">        <span class="comment">// 传入一个 Map</span></span><br><span class="line">        span.log(ImmutableMap.of(<span class="string">"currentTime"</span>, LocalDateTime.now().toString()));</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 输出当前 traceId</span></span><br><span class="line">        System.out.println(span.context().toTraceId());</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 结束并上报 span</span></span><br><span class="line">        span.finish();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> JaegerTracer <span class="title">initTracer</span><span class="params">(String service)</span> </span>&#123;</span><br><span class="line">        Configuration.SamplerConfiguration samplerConfig = Configuration.SamplerConfiguration.fromEnv().withType(<span class="string">"const"</span>).withParam(<span class="number">1</span>);</span><br><span class="line">        Configuration.ReporterConfiguration reporterConfig = Configuration.ReporterConfiguration.fromEnv().withLogSpans(<span class="keyword">true</span>);</span><br><span class="line">        Configuration config = <span class="keyword">new</span> Configuration(service).withSampler(samplerConfig).withReporter(reporterConfig);</span><br><span class="line">        <span class="keyword">return</span> config.getTracer();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>jaeger UI 查询链路，访问 <a href="http://localhost:16686/search，右上角输入" target="_blank" rel="noopener">http://localhost:16686/search，右上角输入</a> traceId 搜索。结果如下</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c9b07414-b152-4ee4-b29f-a634f53f825c" alt="image.png"></p>
+<p>可以看到我们刚刚在代码中的 Tag 和 Log 都记录在链路上了</p>
+<h3 id="线程传递-Span"><a href="#线程传递-Span" class="headerlink" title="线程传递 Span"></a>线程传递 Span</h3><p>Span 之间是可以建立父子关系的，使用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Span parent= tracer.buildSpan(<span class="string">"say-hello"</span>).start();</span><br><span class="line">tracer.buildSpan(<span class="string">"son"</span>)</span><br><span class="line">                .asChildOf(parent)</span><br><span class="line">                .start();</span><br></pre></td></tr></table></figure></p>
+<p>效果如图</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8e6b90e7-8052-4de4-b7a6-962c459b9ab8" alt="image.png"></p>
+<p>parent Span 肯定不能一直在调用栈中传递下去，这对集成 opentracing 的程序来说侵入性太大了。回顾一下上面我们提到了一个 ScopeManager ，来看下其核心方法</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/14d27eb1-7e2b-4909-90cc-8217e9bf3c0d" alt></p>
+<ul>
+<li><p>activate(Span span)：用于将当前 Span Set 到当前上下文中。上图中的注释也给出了该方法如何使用。返回值 Scope 字面翻译为<strong>范围 / 跨度</strong>。稍后我们找一个实现类具体分析一下</p>
+</li>
+<li><p>activeSpan()：这个方法很好理解，从当前上下文中 Get Span</p>
+</li>
+</ul>
+<h4 id="ThreadLocalScopeManager"><a href="#ThreadLocalScopeManager" class="headerlink" title="ThreadLocalScopeManager"></a>ThreadLocalScopeManager</h4><p>Jaeger 中默认的 ScopeManager，该类由 opentracing 提供。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadLocalScopeManager</span> <span class="keyword">implements</span> <span class="title">ScopeManager</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> ThreadLocal&lt;ThreadLocalScope&gt; tlsScope = <span class="keyword">new</span> ThreadLocal&lt;ThreadLocalScope&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Scope <span class="title">activate</span><span class="params">(Span span)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ThreadLocalScope(<span class="keyword">this</span>, span);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Span <span class="title">activeSpan</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        ThreadLocalScope scope = tlsScope.get();</span><br><span class="line">        <span class="keyword">return</span> scope == <span class="keyword">null</span> ? <span class="keyword">null</span> : scope.span();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadLocalScope</span> <span class="keyword">implements</span> <span class="title">Scope</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ThreadLocalScopeManager scopeManager;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Span wrapped;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ThreadLocalScope toRestore;</span><br><span class="line"></span><br><span class="line">    ThreadLocalScope(ThreadLocalScopeManager scopeManager, Span wrapped) &#123;</span><br><span class="line">        <span class="keyword">this</span>.scopeManager = scopeManager;</span><br><span class="line">        <span class="keyword">this</span>.wrapped = wrapped;</span><br><span class="line">        <span class="keyword">this</span>.toRestore = scopeManager.tlsScope.get();</span><br><span class="line">        scopeManager.tlsScope.set(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (scopeManager.tlsScope.get() != <span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="comment">// This shouldn't happen if users call methods in the expected order. Bail out.</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        scopeManager.tlsScope.set(toRestore);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function">Span <span class="title">span</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> wrapped;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>ThreadLocalScopeManager#activate</code>：直接调用了<code>new ThreadLocalScope</code>。在 ThreadLocalScope 构造方法中，首先将从 ThreadLocal 中获取到目前上下文中的 ThreadLocalScope 赋值给 <code>toRestore</code>，然后将 this (ThreadLocalScope 对象) set 到 ThreadLocal。</p>
+<blockquote>
+<p>ThreadLocalScope 中存储着当前的 Span。后续的代码如果想要获取 Span，只需要调用 <code>ScopeManager#activeSpan</code> 就可以（ScopeManager 可以在 Tracer 对象中拿到）</p>
+</blockquote>
+<p>在执行 close 时（Scope 继承了 Closeable），将之前的 Span 重新放回到上下文中</p>
+<h4 id="线程传递-Span-演示"><a href="#线程传递-Span-演示" class="headerlink" title="线程传递 Span 演示"></a>线程传递 Span 演示</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Span parentSpan = tracer.buildSpan(<span class="string">"parentSpan"</span>).start();</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> (Scope scope = tracer.activateSpan(parentSpan)) &#123;</span><br><span class="line">	xxxMethod();</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">	parentSpan.finish();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">xxxMethod</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="comment">// 这里并不需要手动从 ScopeManager 中取出上下文中的 Span</span></span><br><span class="line">	<span class="comment">// start 方法中已经做了</span></span><br><span class="line">	<span class="comment">// 如果 ScopeManager.activeSpan() != null 会自动调用 asChildOf</span></span><br><span class="line">	tracer.buildSpan(<span class="string">"sonSpan"</span>).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="链路中数据共享"><a href="#链路中数据共享" class="headerlink" title="链路中数据共享"></a>链路中数据共享</h3><p>如果需要和链路的下游共享某些数据，使用如下方法<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// 写</span><br><span class="line">span.setBaggageItem(&quot;key&quot;, &quot;value&quot;);</span><br><span class="line"></span><br><span class="line">// 读</span><br><span class="line">span.getBaggageItem(&quot;key&quot;);</span><br></pre></td></tr></table></figure></p>
+<p>只要保证在同一条链路中，即使下游 Span 在不同的进程，依然可以通过 getBaggageItem 读到数据</p>
+<h3 id="跨进程链路追踪"><a href="#跨进程链路追踪" class="headerlink" title="跨进程链路追踪"></a>跨进程链路追踪</h3><p>opentracing 中提供了实现跨进程追踪的规范</p>
+<p>Tracer 接口中提供了如下两个方法</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/d046bae5-fe3a-41a4-a736-7829c0a6181e" alt></p>
+<ul>
+<li><p>inject：将 SpanContext 注入到 Carrier 中，传递给下游的其他进程</p>
+</li>
+<li><p>extract：下游进程从 Carrier 中抽取出 SpanContext，用于创建下游的 Child Span</p>
+</li>
+</ul>
+<p>简单举个例子解释下，例如我们使用 Http 协议访问下游服务，inject 可以将 SpanContext 注入到 HttpHeaders 中。<br>下游服务再从 HttpHeaders 中按照链路中的约定取出有特殊标识的 header 来构建 SpanContext。这样一来就实现了链路的跨进程</p>
+<p>再回到代码层面，通过接口方法的声明我们可以看出来，Format 决定了 Carrier 的类型。下面来看看实际代码中如何实现</p>
+<h4 id="跨进程链路追踪演示"><a href="#跨进程链路追踪演示" class="headerlink" title="跨进程链路追踪演示"></a>跨进程链路追踪演示</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TracingRestTemplateInterceptor</span> <span class="keyword">implements</span> <span class="title">ClientHttpRequestInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String SPAN_URI = <span class="string">"uri"</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Tracer tracer;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TracingRestTemplateInterceptor</span><span class="params">(Tracer tracer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.tracer = tracer;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> ClientHttpResponse <span class="title">intercept</span><span class="params">(HttpRequest request, <span class="keyword">byte</span>[] body, ClientHttpRequestExecution execution)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        ClientHttpResponse httpResponse;</span><br><span class="line">        <span class="comment">// 为当前 RestTemplate 调用，创建一个 Span</span></span><br><span class="line">        Span span = tracer.buildSpan(<span class="string">"RestTemplate-RPC"</span>)</span><br><span class="line">                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)</span><br><span class="line">                .withTag(SPAN_URI, request.getURI().toString())</span><br><span class="line">                .start();</span><br><span class="line">        <span class="comment">// 将当前 SpanContext 注入到 HttpHeaders</span></span><br><span class="line">        tracer.inject(span.context(), Format.Builtin.HTTP_HEADERS,</span><br><span class="line">                <span class="keyword">new</span> HttpHeadersCarrier(request.getHeaders()));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> (Scope scope = tracer.activateSpan(span)) &#123;</span><br><span class="line">            httpResponse = execution.execute(request, body);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            TracingError.handle(span, ex);</span><br><span class="line">            <span class="keyword">throw</span> ex;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            span.finish();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> httpResponse;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>TracingRestTemplateInterceptor 实现了 RestTemplate 的拦截器，用于在 Http 调用之前，将 SpanContext 注入到 HttpHeaders 中。</p>
+<p><code>Format.Builtin.HTTP_HEADERS</code> 决定了当前的 Carrier 类型必须 TextMap （源码中可以看到，这里我没有列出）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpHeadersCarrier</span> <span class="keyword">implements</span> <span class="title">TextMap</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> HttpHeaders httpHeaders;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpHeadersCarrier</span><span class="params">(HttpHeaders httpHeaders)</span>  </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.httpHeaders = httpHeaders;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(String key, String value)</span> </span>&#123;</span><br><span class="line">        httpHeaders.add(key, value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Iterator&lt;Map.Entry&lt;String, String&gt;&gt; iterator() &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"Should be used only with tracer#inject()"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>tracer.inject 内部会调用 TextMap 的 put 方法，这样就将 SpanContext 注入到 HttpHeaders 了。</p>
+<p>下面再来看看下游怎么写</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TracingFilter</span> <span class="keyword">implements</span> <span class="title">Filter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Tracer tracer;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TracingFilter</span><span class="params">(Tracer tracer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.tracer = tracer;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException </span>&#123;</span><br><span class="line">        HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;</span><br><span class="line">        HttpServletResponse httpResponse = (HttpServletResponse) servletResponse;</span><br><span class="line">        <span class="comment">// 通过 HttpHeader 构建 SpanContext</span></span><br><span class="line">        SpanContext extractedContext = tracer.extract(Format.Builtin.HTTP_HEADERS,</span><br><span class="line">                <span class="keyword">new</span> HttpServletRequestExtractAdapter(httpRequest));</span><br><span class="line"></span><br><span class="line">        String operationName = httpRequest.getMethod() + <span class="string">":"</span> + httpRequest.getRequestURI();</span><br><span class="line">        Span span = tracer.buildSpan(operationName)</span><br><span class="line">                .asChildOf(extractedContext)</span><br><span class="line">                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)</span><br><span class="line">                .start();</span><br><span class="line"></span><br><span class="line">        httpResponse.setHeader(<span class="string">"TraceId"</span>, span.context().toTraceId());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span> (Scope scope = tracer.activateSpan(span)) &#123;</span><br><span class="line">            filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            TracingError.handle(span, ex);</span><br><span class="line">            <span class="keyword">throw</span> ex;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            span.finish();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>TracingFilter 实现了 Servlet Filter，每次请求访问到服务器时创建 Span，如果可以抽取到 SpanContext，则创建的是 Child Span</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HttpServletRequestExtractAdapter</span> <span class="keyword">implements</span> <span class="title">TextMap</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> IdentityHashMap&lt;String, String&gt; headers;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">HttpServletRequestExtractAdapter</span><span class="params">(HttpServletRequest httpServletRequest)</span> </span>&#123;</span><br><span class="line">        headers = servletHeadersToMap(httpServletRequest);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Iterator&lt;Map.Entry&lt;String, String&gt;&gt; iterator() &#123;</span><br><span class="line">        <span class="keyword">return</span> headers.entrySet().iterator();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(String key, String value)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"This class should be used only with Tracer.inject()!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> IdentityHashMap&lt;String, String&gt; <span class="title">servletHeadersToMap</span><span class="params">(HttpServletRequest httpServletRequest)</span> </span>&#123;</span><br><span class="line">        IdentityHashMap&lt;String, String&gt; headersResult = <span class="keyword">new</span> IdentityHashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">        Enumeration&lt;String&gt; headerNamesIt = httpServletRequest.getHeaderNames();</span><br><span class="line">        <span class="keyword">while</span> (headerNamesIt.hasMoreElements()) &#123;</span><br><span class="line">            String headerName = headerNamesIt.nextElement();</span><br><span class="line"></span><br><span class="line">            Enumeration&lt;String&gt; valuesIt = httpServletRequest.getHeaders(headerName);</span><br><span class="line">            <span class="keyword">while</span> (valuesIt.hasMoreElements()) &#123;</span><br><span class="line">                <span class="comment">// IdentityHashMap 判断两个 Key 相等的条件为 k1 == k2</span></span><br><span class="line">                <span class="comment">// 为了让两个相同的字符串同时存在，必须使用 new String</span></span><br><span class="line">                headersResult.put(<span class="keyword">new</span> String(headerName), valuesIt.nextElement());</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> headersResult;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>tracer.extract 内部会调用 HttpServletRequestExtractAdapter iterator 方法用于构建 SpanContext</p>
+<p>如果你看完了这些还是对于跨进程链路追踪有疑惑的，可以下载一下我写的 Demo，通过 Debug 来更进一步了解</p>
+<p><a href="https://github.com/TavenYin/taven-springcloud-learning/tree/master/jaeger-mutilserver" target="_blank" rel="noopener">https://github.com/TavenYin/taven-springcloud-learning/tree/master/jaeger-mutilserver</a></p>
+<p>Demo 中的代码参考了 opentracing 的实现，做了相应的简化，诸位可以放心食用</p>
+<h3 id="实际使用"><a href="#实际使用" class="headerlink" title="实际使用"></a>实际使用</h3><p>opentracing 已经实现了一些常用 api 的链路埋点，在没有什么特殊需求的时候，我们可以直接使用这些代码。具体参考</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/cffbf008-0453-4b13-ae6b-af4dba9d8a8e" alt></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/微服务/" rel="tag"># 微服务</a>
+          
+            <a href="/tags/Opentracing/" rel="tag"># Opentracing</a>
+          
+            <a href="/tags/链路追踪/" rel="tag"># 链路追踪</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/a52e1819.html" rel="next" title="聊聊 IO 多路复用">
+                <i class="fa fa-chevron-left"></i> 聊聊 IO 多路复用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">61</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://gitee.com/yintianwen7" target="_blank" title="Gitee">
+                      
+                        <i class="fa fa-fw fa-git"></i>Gitee</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#链路追踪的作用"><span class="nav-number">1.</span> <span class="nav-text">链路追踪的作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#什么是-Opentracing"><span class="nav-number">2.</span> <span class="nav-text">什么是 Opentracing</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Opentracing-核心接口"><span class="nav-number">3.</span> <span class="nav-text">Opentracing 核心接口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#快速开始"><span class="nav-number">4.</span> <span class="nav-text">快速开始</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#线程传递-Span"><span class="nav-number">5.</span> <span class="nav-text">线程传递 Span</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#ThreadLocalScopeManager"><span class="nav-number">5.1.</span> <span class="nav-text">ThreadLocalScopeManager</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#线程传递-Span-演示"><span class="nav-number">5.2.</span> <span class="nav-text">线程传递 Span 演示</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#链路中数据共享"><span class="nav-number">6.</span> <span class="nav-text">链路中数据共享</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#跨进程链路追踪"><span class="nav-number">7.</span> <span class="nav-text">跨进程链路追踪</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#跨进程链路追踪演示"><span class="nav-number">7.1.</span> <span class="nav-text">跨进程链路追踪演示</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实际使用"><span class="nav-number">8.</span> <span class="nav-text">实际使用</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

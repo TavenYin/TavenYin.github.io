@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT">
+  <meta name="keywords" content="并发,多线程,NIO,IO 多路服用,">
 
 
 
@@ -79,18 +79,26 @@
 
 
 
-<meta name="description" content="基本信息 殷天文/男/1995 专科/大连软件职业学院/软件工程 工作年限：4.5年 电子邮箱：** 电话：** 博客：http://yintianwen.top Github: https://github.com/TavenYin 简书：https://www.jianshu.com/u/cd682de00804 公众号：殷天文 期望岗位：高级后端开发 / 高级Java工程师   专业技能">
-<meta name="keywords" content="殷天文,yintianwen">
+<meta name="description" content="像 Nginx 这种以高并发高性能闻名的项目，之所以性能如此优秀，其原因是使用了 IO 多路复用技术，可以用最少的进程来支持大量的请求。本文和大家一起聊聊什么是 IO 多路复用，它能带来什么 常见的 IO 模型 所有的 IO 都分为两个阶段：”等待数据就绪” 和 “拷贝到用户空间”。 我最开始不熟悉 IO 的时候，很难理解为什么有这两个过程，下面我来仔细说说 等待数据就绪：以 socket.rea">
+<meta name="keywords" content="并发,多线程,NIO,IO 多路服用">
 <meta property="og:type" content="article">
-<meta property="og:title" content="个人简历备份">
-<meta property="og:url" content="https://yintianwen.top/post/e860cc2d.html">
+<meta property="og:title" content="聊聊 IO 多路复用">
+<meta property="og:url" content="https://yintianwen.top/post/a52e1819.html">
 <meta property="og:site_name" content="殷天文 - Blog">
-<meta property="og:description" content="基本信息 殷天文/男/1995 专科/大连软件职业学院/软件工程 工作年限：4.5年 电子邮箱：** 电话：** 博客：http://yintianwen.top Github: https://github.com/TavenYin 简书：https://www.jianshu.com/u/cd682de00804 公众号：殷天文 期望岗位：高级后端开发 / 高级Java工程师   专业技能">
+<meta property="og:description" content="像 Nginx 这种以高并发高性能闻名的项目，之所以性能如此优秀，其原因是使用了 IO 多路复用技术，可以用最少的进程来支持大量的请求。本文和大家一起聊聊什么是 IO 多路复用，它能带来什么 常见的 IO 模型 所有的 IO 都分为两个阶段：”等待数据就绪” 和 “拷贝到用户空间”。 我最开始不熟悉 IO 的时候，很难理解为什么有这两个过程，下面我来仔细说说 等待数据就绪：以 socket.rea">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2021-05-05T13:15:20.959Z">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/1cf39861-7e8c-440f-80ad-9a9170dfe92d">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c0e29842-8d58-413c-aae5-04ff5b4954f0">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/177c9a60-ee7b-4117-9711-5a77edfbc3d3">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/eb4d5e95-b401-4989-aaca-673c5b1da939">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/600aff54-ec7e-43a4-a7db-ceeccc440e41">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/fb3adfd5-6935-4caa-ae20-535473fa9ef6">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/24b756aa-6b3b-4d7d-81bd-f4189eee4b36">
+<meta property="og:updated_time" content="2021-10-12T14:48:11.035Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="个人简历备份">
-<meta name="twitter:description" content="基本信息 殷天文/男/1995 专科/大连软件职业学院/软件工程 工作年限：4.5年 电子邮箱：** 电话：** 博客：http://yintianwen.top Github: https://github.com/TavenYin 简书：https://www.jianshu.com/u/cd682de00804 公众号：殷天文 期望岗位：高级后端开发 / 高级Java工程师   专业技能">
+<meta name="twitter:title" content="聊聊 IO 多路复用">
+<meta name="twitter:description" content="像 Nginx 这种以高并发高性能闻名的项目，之所以性能如此优秀，其原因是使用了 IO 多路复用技术，可以用最少的进程来支持大量的请求。本文和大家一起聊聊什么是 IO 多路复用，它能带来什么 常见的 IO 模型 所有的 IO 都分为两个阶段：”等待数据就绪” 和 “拷贝到用户空间”。 我最开始不熟悉 IO 的时候，很难理解为什么有这两个过程，下面我来仔细说说 等待数据就绪：以 socket.rea">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/1cf39861-7e8c-440f-80ad-9a9170dfe92d">
 
 
 
@@ -120,13 +128,13 @@
 
 
 
-  <link rel="canonical" href="https://yintianwen.top/post/e860cc2d.html">
+  <link rel="canonical" href="https://yintianwen.top/post/a52e1819.html">
 
 
 
 
 
-  <title>个人简历备份 | 殷天文 - Blog</title>
+  <title>聊聊 IO 多路复用 | 殷天文 - Blog</title>
   
 
 
@@ -305,7 +313,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/e860cc2d.html">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/a52e1819.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="殷天文">
@@ -322,7 +330,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">个人简历备份</h2>
+          <h2 class="post-title" itemprop="name headline">聊聊 IO 多路复用</h2>
         
 
         <div class="post-meta">
@@ -334,8 +342,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-12-03T00:00:00+08:00">
-                2020-12-03
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-09-02T00:00:00+08:00">
+                2021-09-02
               </time>
             
 
@@ -357,8 +365,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/resume/" itemprop="url" rel="index">
-                    <span itemprop="name">resume</span>
+                  <a href="/categories/Java/" itemprop="url" rel="index">
+                    <span itemprop="name">Java</span>
                   </a>
                 </span>
 
@@ -394,93 +402,53 @@
       
 
       
-        <hr>
-<h3 id="基本信息"><a href="#基本信息" class="headerlink" title="基本信息"></a>基本信息</h3><ul>
-<li>殷天文/男/1995</li>
-<li>专科/大连软件职业学院/软件工程</li>
-<li>工作年限：4.5年</li>
-<li>电子邮箱：<em>**</em></li>
-<li>电话：<em>**</em></li>
-<li>博客：<a href="http://yintianwen.top">http://yintianwen.top</a></li>
-<li>Github: <a href="https://github.com/TavenYin" target="_blank" rel="noopener">https://github.com/TavenYin</a></li>
-<li>简书：<a href="https://www.jianshu.com/u/cd682de00804" target="_blank" rel="noopener">https://www.jianshu.com/u/cd682de00804</a></li>
-<li>公众号：殷天文</li>
-<li>期望岗位：高级后端开发 / 高级Java工程师</li>
-</ul>
-<hr>
-<h3 id="专业技能"><a href="#专业技能" class="headerlink" title="专业技能"></a>专业技能</h3><ul>
-<li>扎实的Java基础，了解JVM，熟悉常用API实现原理，熟练掌握多线程开发，熟悉IO/NIO</li>
-<li>熟练使用Java爬虫技术</li>
-<li>熟悉常用设计模式</li>
-<li>熟练掌握Spring等常用Java开源框架，并深入分析过其实现原理，对源码学习有浓厚的兴趣</li>
-<li>熟练使用MySQL/Redis/Oracle等数据库，了解Elasticsearch/MongoDB/Postgres等数据库</li>
-<li>熟练掌握Seata/可靠消息等分布式事务解决方案</li>
-<li>熟练掌握数据库迁移，SQL优化，分库分表等技术</li>
-<li>熟练掌握Kafka/RabbitMQ/RocketMQ</li>
-<li>熟悉Dubbo/SpringCloud等微服务框架</li>
-<li>熟悉PHP/JavaScript/Lua等语言的开发</li>
-<li>熟悉Linux/Shell/Docker</li>
-</ul>
-<hr>
-<h3 id="工作经历"><a href="#工作经历" class="headerlink" title="工作经历"></a>工作经历</h3><p>思佰益必智信息技术（大连）有限公司 2021.1 ~ 至今 APP DBA</p>
-<ul>
-<li>数据迁移系统 2021.1 ~ 至今<br>技术：Kafka, Kafka Connect, Debezium, Oracle, Postgres<br>参与数据迁移系统的二次开发，技术方案调研，测试，部署<ul>
-<li>掌握了Oracle全量加增量数据迁移方案（闪回查询 + LogMiner/XStream）</li>
-<li>掌握了Debezium Oracle-Connector源码</li>
-<li>期间自学了Kafka/Kafka Connect</li>
-</ul>
-</li>
-</ul>
-<p>大连云匠科技 2019.8 ~ 2021.1 后端研发工程师</p>
-<ul>
-<li><p>IronERP 2020.8 ~ 2021.1<br>技术：Java8, SpringBoot, Mybatis, MySQL, Redis, RocketMQ<br>参与并主导了订单推送消费的开发  </p>
-<ul>
-<li>期间自学并掌握了RocketMQ</li>
-</ul>
-</li>
-<li><p>爱心助农 2020.1 ~ 2020.6<br>技术：PHP, YII2, MySQL, Redis<br>参与并主导了库存的重构，解决超卖问题，并总结了完整的库存实现方案</p>
-<ul>
-<li>重构原系统中不合理的库存表设计，利用Redis命令原子性的特点，使用Redis+Lua作为库存扣减的新方案</li>
-<li>后来还发现了订单的并发操作情况（例如用户取消和系统自动取消，系统自动取消和支付回调）同样会造成超卖的现象，分别针对这些场景做了优化</li>
-<li>期间自学了PHP相关技术</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li>小太熊/电商Saas 2019.8 - 2020.6<br>技术：Java8, SpringBoot, JdbcTemplate, SpringCloud Config, Spring Security, ElasticSearch, Redis, MySQL, RabbitMQ<br>参与并主导了核心业务的设计与开发，如交易功能，保证金相关  <ul>
-<li>掌握MQ实现分布式事务的方案  </li>
-<li>掌握如何在并发场景增减库存  </li>
-<li>学习到了如何设计可插拔的业务插件  </li>
-<li>开发了基于Logback的分布式日志收集</li>
-</ul>
-</li>
-</ul>
-<p>大连东方之星 2018.10 ~ 2019.8</p>
-<ul>
-<li>国家义务教育优质均衡发展评估系统 2018/10 ~ 2019/8<br>技术：Java8, SpringBoot, Mybatis, MySQL, Druid, Shiro, JWT, Redis<br>参与并主导了产品基础架构与核心业务的设计。还负责了业务功能的分配，代码Review等  <ul>
-<li>开发了基于Shiro + Jwt实现了用户鉴权以及题出用户功能  </li>
-<li>开发了基于Spring AOP 和 Redis分布式锁的防止并发提交功能  </li>
-</ul>
-</li>
-</ul>
-<p>大连万思动科技 2016.9 ~ 2018.10</p>
-<ul>
-<li>通信运行方式管理系统（国家电网）<br>技术：Java8, Springboot, Mybatis, MySQL, Ehcache, ElasticSearch, Thymeleaf, Openlayer3<br>参与并主导了整个后端业务的设计与开发  <ul>
-<li>自学并掌握了Dijkstra算法，用于故障迂回算法的开发  </li>
-<li>自学并掌握了ElasticSearch的使用，实现了分词搜索，同义词匹配搜索等功能  </li>
-</ul>
-</li>
-</ul>
-<hr>
-<h3 id="技术文章-个人项目"><a href="#技术文章-个人项目" class="headerlink" title="技术文章/个人项目"></a>技术文章/个人项目</h3><ul>
-<li><a href="https://github.com/TavenYin/database-cdc" target="_blank" rel="noopener">数据库CDC (Change Data Capture) 核心技术</a></li>
-<li><a href="https://www.jianshu.com/p/ff6db00ad866" target="_blank" rel="noopener">深入理解 Dijkstra 算法实现原理</a></li>
-<li><a href="https://www.jianshu.com/p/e5dc4d07e24e" target="_blank" rel="noopener">分布式事务 Seata AT模式原理与实战</a></li>
-<li><a href="https://www.jianshu.com/p/f8e48ac2dce7" target="_blank" rel="noopener">Spring 源码解析 @RequestBody @ResponseBody 的来龙去脉</a></li>
-<li><a href="https://www.jianshu.com/p/2a93c089e9a5" target="_blank" rel="noopener">浅入浅出 Spring 事务传播实现原理</a></li>
-<li><a href="https://www.jianshu.com/p/006a4c86ec8b" target="_blank" rel="noopener">Redisson 源码解析，如何利用Redis实现分布式可重入锁</a></li>
-</ul>
-<h3 id="致谢"><a href="#致谢" class="headerlink" title="致谢"></a>致谢</h3><p>感谢您花时间阅读我的简历，期待能有机会和您共事</p>
+        <p>像 Nginx 这种以高并发高性能闻名的项目，之所以性能如此优秀，其原因是使用了 IO 多路复用技术，可以用最少的进程来支持大量的请求。本文和大家一起聊聊什么是 IO 多路复用，它能带来什么</p>
+<h3 id="常见的-IO-模型"><a href="#常见的-IO-模型" class="headerlink" title="常见的 IO 模型"></a>常见的 IO 模型</h3><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/1cf39861-7e8c-440f-80ad-9a9170dfe92d" alt="四种 IO 模型"></p>
+<p>所有的 IO 都分为两个阶段：”等待数据就绪” 和 “拷贝到用户空间”。</p>
+<p>我最开始不熟悉 IO 的时候，很难理解为什么有这两个过程，下面我来仔细说说</p>
+<p>等待数据就绪：以 socket.read 为例，不管我们使用什么编程语言，这个操作都是去交给操作系统完成的（调用系统函数）。在执行系统函数时 CPU 向网卡发出 IO 请求。网卡在接收到数据之后，由网卡的 DMA 把的数据写到操作系统的<strong>内核缓冲区</strong>，完成后通知 CPU，之后 CPU 会将内核缓冲区的数据拷贝到用户空间</p>
+<p>拷贝到用户空间：操作系统有自己的内存区域，叫做内核空间。我们平常跑的程序都在用户空间，用户空间无法直接访问内核空间的数据，所以需要拷贝。拷贝到用户空间这个过程可以理解为纯 CPU 操作，非常地快，可以认为基本不耗时</p>
+<h3 id="聊聊开发中-BIO-场景"><a href="#聊聊开发中-BIO-场景" class="headerlink" title="聊聊开发中 BIO 场景"></a>聊聊开发中 BIO 场景</h3><p>我们平时 Java 开发常用的框架 Spring 或者 Servlet 这都是经典的 BIO （Blocking IO，阻塞 IO）模型。</p>
+<p>使用 Servlet 这种 BIO 的模型都需要大量的线程，其根本原因有两点</p>
+<blockquote>
+<p>虽然 Servlet 已经支持了 NIO，但是本文还是把它作为一个经典的 BIO 模型来讨论</p>
+</blockquote>
+<h4 id="1-压榨-CPU"><a href="#1-压榨-CPU" class="headerlink" title="1. 压榨 CPU"></a>1. 压榨 CPU</h4><p>当 IO 阻塞时，CPU 处于空闲状态。想象一下，你一条 SQL 发给数据库，这个时候必须等到数据库给你响应才能继续往下执行。而 IO 本身并不是时刻都需要 CPU 的参与（例如我们上面说的等待就绪过程不需要 CPU 参与）。虽然这个过程对于人类来说可能很快，但是 CPU 确实在摸鱼。所以 BIO 模型中为了充分的利用 CPU 必须使用大量的线程（当发生 IO 阻塞时，CPU切换到其他线程继续工作）</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/c0e29842-8d58-413c-aae5-04ff5b4954f0" alt></p>
+<h4 id="2-为了处理更多的连接"><a href="#2-为了处理更多的连接" class="headerlink" title="2. 为了处理更多的连接"></a>2. 为了处理更多的连接</h4><p>以前的我很傻的认为一个线程只能处理一个连接。但是其实 Thread 和 Connection 这两个东西之间根本没有什么羁绊，你完全可以在一个线程中处理 N 多个请求，只不过对于靠后的请求来说，他要等待的时间太长了。所以在 BIO 模型中，大多数都是 <strong>每连接每线程</strong> 的方式</p>
+<h4 id="BIO-带来的瓶颈"><a href="#BIO-带来的瓶颈" class="headerlink" title="BIO 带来的瓶颈"></a>BIO 带来的瓶颈</h4><p>BIO 为了更充分的利用 CPU 和处理更多的连接，必须要使用大量的线程。而线程过多带来的副作用就是占用大量内存，线程上下文切换占用大量 CPU 时间片等等</p>
+<p>那么有没有更好的方案呢？</p>
+<h3 id="NIO"><a href="#NIO" class="headerlink" title="NIO"></a>NIO</h3><p>相对于 BIO 来说，NIO 调用可以立刻得到反馈，不需要再傻等了。以 read 为例，如果数据已经就绪则返回给用户；反之返回 0，永远不会阻塞。</p>
+<p>NIO 特性貌似可以解决 BIO 的痛点，我们通过一个线程来监听所有的 socket，当 socket 就绪时，再进行读写操作，这样做可以吗？</p>
+<p>可以，但是需要不断的遍历所有的 socket，这样做的话效率还是有点低，有更好的办法吗？</p>
+<h3 id="IO-多路复用"><a href="#IO-多路复用" class="headerlink" title="IO 多路复用"></a>IO 多路复用</h3><p>IO 多路复用可以在一个线程中监听多个文件描述符（Linux 中万物皆是文件描述符），一旦某个描述符就绪（一般是读就绪或者写就绪），能够通知程序进行相应的读写操作。</p>
+<h4 id="select-poll-epoll"><a href="#select-poll-epoll" class="headerlink" title="select poll epoll"></a>select poll epoll</h4><p>这三个函数都可以用于实现 IO 多路复用，简单来聊聊这三个函数</p>
+<p>select：当被监听的 fd（文件描述符）就绪后会返回，但是我们无法知道具体是哪些 fd 就绪了，只能遍历所有的 fd。通常来说某一时刻，就绪的 fd 并不会很多，但是使用 select 必须要遍历所有的 fd，这就造成了一定程度上的性能损失。select 最多可监听的 fd 是有限制的，32位操作系统默认1024个，64位默认2048</p>
+<p>poll：和 select 一样，使用 poll 时也无法知道具体哪些 fd 就绪了，还是需要遍历。poll 最大的改进就是没有了监听数量的限制，但是监听了过多的 fd 会导致性能不佳</p>
+<p>epoll：通常在 Linux 系统中使用 IO 多路复用，都是在使用 epoll 函数。epoll 是 select 和 poll 的增强，可以通知我们哪些 fd 已经就绪了，并且没有监听数量的限制。所以使用 epoll 的性能要远远优于 select 和 poll</p>
+<p>关于这三个函数的细节，感兴趣的同学自行谷歌一下，这里我就不多说了。</p>
+<h3 id="基于-IO-多路复用的开发模型"><a href="#基于-IO-多路复用的开发模型" class="headerlink" title="基于 IO 多路复用的开发模型"></a>基于 IO 多路复用的开发模型</h3><h4 id="BIO-线程模型"><a href="#BIO-线程模型" class="headerlink" title="BIO 线程模型"></a>BIO 线程模型</h4><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/177c9a60-ee7b-4117-9711-5a77edfbc3d3" alt="BIO 线程模型"></p>
+<p>传统的 BIO 模型，每当服务端 accept 到一个 socket 时，就将其分配给一个线程单独处理。</p>
+<h4 id="单线程-Reactor"><a href="#单线程-Reactor" class="headerlink" title="单线程 Reactor"></a>单线程 Reactor</h4><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/eb4d5e95-b401-4989-aaca-673c5b1da939" alt="单线程 Reactor 模型"></p>
+<p>上图展示了一个单线程的 Reactor 模型</p>
+<p>步骤1：accept，等待事件到来（Reactor负责）<br>步骤2：read + dispatch，将读就绪事件分发给用户定义的处理器（Reactor负责）<br>步骤3：decode，读数据（用户处理器负责）<br>步骤4：compute，处理数据（用户处理器负责）<br>步骤5：encode（用户处理器负责）<br>步骤6：send，写就绪后发送数据（Reactor负责）</p>
+<p>为了方便大家理解，这里贴出单线程 Reactor 伪代码<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">// 参考自美团技术团队</span><br><span class="line">interface ChannelHandler&#123;</span><br><span class="line">    void channelReadComplate(Channel channel，byte[] data);</span><br><span class="line">    void channelWritable(Channel channel);</span><br><span class="line">&#125;</span><br><span class="line">class Channel&#123;</span><br><span class="line">    Socket socket;</span><br><span class="line">    Event event;//读，写或者连接</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">//IO线程主循环：</span><br><span class="line">class IOThread extends Thread&#123;</span><br><span class="line">    Map&lt;Channel, ChannelHandler&gt; handlerMap;//所有channel的对应事件处理器</span><br><span class="line"></span><br><span class="line">    public void run()&#123;</span><br><span class="line">        Channel channel;</span><br><span class="line">        while(channel=Selector.select())&#123;//选择就绪的事件和对应的连接</span><br><span class="line">            if(channel.event==accept)&#123;</span><br><span class="line">                registerNewChannelHandler(channel);//如果是新连接，则注册一个新的读写处理器</span><br><span class="line">                Selector.interested(read);</span><br><span class="line">            &#125;</span><br><span class="line">            if(channel.event==write)&#123;</span><br><span class="line">                getChannelHandler(channel).channelWritable(channel);//如果可以写，则执行写事件</span><br><span class="line">            &#125;</span><br><span class="line">            if(channel.event==read)&#123;</span><br><span class="line">                byte[] data = channel.read();</span><br><span class="line">                if(channel.read()==0)//没有读到数据，表示本次数据读完了</span><br><span class="line">                &#123;</span><br><span class="line">                    getChannelHandler(channel).channelReadComplate(channel, data);//处理读完成事件</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>通过使用 IO 多路复用，Reactor 模型可以非阻塞的在单个线程中处理多个 Socket，这样做性能确实很不错，但是能否在此基础上充分利用 CPU 多核来实现多路 IO 复用呢？</p>
+<p>我们理解了单线程 Reactor 模型的工作原理之后，再来看看多线程 Reactor 模型如何工作</p>
+<h4 id="多线程-Reactor-1"><a href="#多线程-Reactor-1" class="headerlink" title="多线程 Reactor 1"></a>多线程 Reactor 1</h4><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/600aff54-ec7e-43a4-a7db-ceeccc440e41" alt="多线程 Reactor 1"></p>
+<p>上图是 Reactor 的多线程的一种。例如 Netty 以及基于 Netty 的一些框架（Vert.x 和 WebFlux），使用的就是类似的线程模型，可以充分利用多核 CPU</p>
+<p>mainReactor 负责 accpet。subReactor 是一组线程，在监听到 Socket 读写就绪时，进行相应的处理</p>
+<p>需要注意的是，我们刚刚讲过的这两种 Reactor 模型，<strong>不能阻塞主 IO 线程</strong>。在 compute 过程中如果涉及 IO 调用，或者大量的计算的话，会导致整体系统吞吐量和响应时间降低。</p>
+<p>但是不管什么系统，不涉及 IO 调用是不现实的。通常在 Vert.x 和 WebFlux 这种 <strong>Reactor 模型的框架</strong>中，执行阻塞 IO 和数据库调用都会在单独的线程池中</p>
+<h4 id="多线程-Reactor-2"><a href="#多线程-Reactor-2" class="headerlink" title="多线程 Reactor 2"></a>多线程 Reactor 2</h4><p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/fb3adfd5-6935-4caa-ae20-535473fa9ef6" alt="多线程 Reactor 2"></p>
+<p>这也是多线程 Reactor 的一种，同样可以利用 IO 多路复用非阻塞的进行 read 和 send。</p>
+<p>和单线程 Reactor 的区别是，把 decode, compute, encode 这三个步骤交给线程池来处理</p>
+<p>该模型的缺点也和单线程模型类似，只使用了一个线程进行 Socket 的读写，所以该模型可以再优化一下。如下图所示</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/24b756aa-6b3b-4d7d-81bd-f4189eee4b36" alt="多线程 Reactor 2 优化"></p>
+<p>和上面的多线程 Reactor 1 思路是一样的，mainReactor 负责 accept，subReactor 是一组线程负责 Socket 的读写</p>
+<p>Tomcat NIO 模式使用的就是类似的线程模型。虽然 Tomcat 中支持了 NIO，但是为什么基于 Tomcat 的应用还是需要大量的线程？首先 Tomcat 的NIO 仅仅是作用在 Socket 的读写。其次我们业务开发中使用了太多的 BIO API（例如 JDBC），没法完全的<strong>非阻塞化</strong></p>
+<h3 id="使用-IO-多路复用框架能带来什么"><a href="#使用-IO-多路复用框架能带来什么" class="headerlink" title="使用 IO 多路复用框架能带来什么"></a>使用 IO 多路复用框架能带来什么</h3><p>IO 多路复用这么强，如果把业务开发全部改造成这种模型是不是性能会大幅度提升？实则不然，IO 多路复用的优势是<strong>使用更少的线程处理更多的连接</strong>，例如 Nginx，网关，这种可能需要处理海量连接转发的服务，它们就非常适合使用 IO 多路复用。IO 多路复用并不能让你的业务系统提速，但是它可以让你的系统支撑更多的连接</p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://tech.meituan.com/2016/11/04/nio.html" target="_blank" rel="noopener">https://tech.meituan.com/2016/11/04/nio.html</a><br><a href="http://c.biancheng.net/view/2349.html" target="_blank" rel="noopener">http://c.biancheng.net/view/2349.html</a><br><a href="https://segmentfault.com/a/1190000003063859" target="_blank" rel="noopener">https://segmentfault.com/a/1190000003063859</a><br><a href="https://www.zhihu.com/question/28594409" target="_blank" rel="noopener">https://www.zhihu.com/question/28594409</a><br><a href="https://www.zhihu.com/question/37271342" target="_blank" rel="noopener">https://www.zhihu.com/question/37271342</a><br><a href="https://juejin.cn/post/6844903492121788429" target="_blank" rel="noopener">https://juejin.cn/post/6844903492121788429</a><br><a href="https://www.pdai.tech/md/java/io/java-io-nio-select-epoll.html" target="_blank" rel="noopener">https://www.pdai.tech/md/java/io/java-io-nio-select-epoll.html</a></p>
 
       
     </div>
@@ -496,6 +464,18 @@
 
     <footer class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/并发/" rel="tag"># 并发</a>
+          
+            <a href="/tags/多线程/" rel="tag"># 多线程</a>
+          
+            <a href="/tags/NIO/" rel="tag"># NIO</a>
+          
+            <a href="/tags/IO-多路服用/" rel="tag"># IO 多路服用</a>
+          
+        </div>
+      
 
       
       
@@ -505,8 +485,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/post/6fe3d525.html" rel="next" title="分布式事务 Seata AT模式原理与实战">
-                <i class="fa fa-chevron-left"></i> 分布式事务 Seata AT模式原理与实战
+              <a href="/post/b174070f.html" rel="next" title="Sentinel 热点参数限流原理">
+                <i class="fa fa-chevron-left"></i> Sentinel 热点参数限流原理
               </a>
             
           </div>
@@ -515,8 +495,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/post/11f7961b.html" rel="prev" title="问题分析：Kafka Connect 引入了Fastjson后，Rest API响应为{}">
-                问题分析：Kafka Connect 引入了Fastjson后，Rest API响应为{} <i class="fa fa-chevron-right"></i>
+              <a href="/post/8966d8dd.html" rel="prev" title="Opentracing 链路追踪实战">
+                Opentracing 链路追踪实战 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -596,7 +576,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-count">50</span>
                   <span class="site-state-item-name">博客</span>
                 </a>
               </div>
@@ -607,7 +587,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-count">7</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -618,7 +598,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">57</span>
+                  <span class="site-state-item-count">61</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -673,7 +653,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#基本信息"><span class="nav-number">1.</span> <span class="nav-text">基本信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#专业技能"><span class="nav-number">2.</span> <span class="nav-text">专业技能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#工作经历"><span class="nav-number">3.</span> <span class="nav-text">工作经历</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#技术文章-个人项目"><span class="nav-number">4.</span> <span class="nav-text">技术文章/个人项目</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#致谢"><span class="nav-number">5.</span> <span class="nav-text">致谢</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#常见的-IO-模型"><span class="nav-number">1.</span> <span class="nav-text">常见的 IO 模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#聊聊开发中-BIO-场景"><span class="nav-number">2.</span> <span class="nav-text">聊聊开发中 BIO 场景</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-压榨-CPU"><span class="nav-number">2.1.</span> <span class="nav-text">1. 压榨 CPU</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-为了处理更多的连接"><span class="nav-number">2.2.</span> <span class="nav-text">2. 为了处理更多的连接</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#BIO-带来的瓶颈"><span class="nav-number">2.3.</span> <span class="nav-text">BIO 带来的瓶颈</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NIO"><span class="nav-number">3.</span> <span class="nav-text">NIO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IO-多路复用"><span class="nav-number">4.</span> <span class="nav-text">IO 多路复用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#select-poll-epoll"><span class="nav-number">4.1.</span> <span class="nav-text">select poll epoll</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于-IO-多路复用的开发模型"><span class="nav-number">5.</span> <span class="nav-text">基于 IO 多路复用的开发模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#BIO-线程模型"><span class="nav-number">5.1.</span> <span class="nav-text">BIO 线程模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#单线程-Reactor"><span class="nav-number">5.2.</span> <span class="nav-text">单线程 Reactor</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#多线程-Reactor-1"><span class="nav-number">5.3.</span> <span class="nav-text">多线程 Reactor 1</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#多线程-Reactor-2"><span class="nav-number">5.4.</span> <span class="nav-text">多线程 Reactor 2</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用-IO-多路复用框架能带来什么"><span class="nav-number">6.</span> <span class="nav-text">使用 IO 多路复用框架能带来什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
             
 
           </div>
