@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[Spring RestTemplate 设置每次请求的 Timeout]]></title>
+    <url>%2Fpost%2F1a81d82f.html</url>
+    <content type="text"><![CDATA[前言在实现这个功能之前，我也上网搜索了一下方案。大多数的解决方法都是定义多个 RestTemplate 设置不同的超时时间。有没有更好的方式呢？带着这个问题，我们一起来深入一下 RestTemplate 的源码 提示：本文包含了大量的源码分析，如果想直接看笔者是如何实现的，直接跳到最后的改造思路 版本SpringBoot：2.3.4.RELEASE RestTemplate RestTemplate#doExecute RestTemplate 发送请求的方法，随便找一个最后都会走到上图的 doExecute。 从上图来看，这个方法做的就是这几件事 createRequest 执行 RequestCallback 执行 Request 处理响应，将响应转换成用户声明的类型 RequestCallback 做了什么 根据 RestTemplate 中的定义 HttpMessageConverter 填充 Header Accept（支持的响应类型） 通过 HttpMessageConverter 转换 HttpBody 这里我们需要重点关注的是，createRequest 和 执行 Request 部分 createRequestRestTemplate 中的 Request 是由 RequestFactory 完成创建。所以我们先来看下获取 RequestFactory 的逻辑 如果 RestTemplate 配置了 ClientHttpRequestInterceptor（拦截器）的话，则创建 InterceptingClientHttpRequestFactory，反之则直接获取 RequestFactory 我们可以通过 RestTemplate#setInterceptors 手动添加拦截器； 当使用 @LoadBalanced 标记 RestTemplate 时，RestTemplate 中也会被加入拦截器，具体原理可以参考 org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration 我们先来看下 InterceptingClientHttpRequestFactory 是什么逻辑 InterceptingClientHttpRequestFactory createRequest 方法直接返回了 InterceptingClientHttpRequest，参考 doExecute 的逻辑，接下来会执行 InterceptingClientHttpRequest#execute，其内部会执行到 InterceptingRequestExecution#execute 这里随便找一个拦截器的实现配合着来看 逻辑梳理一下： InterceptingRequestExecution 会先去执行所有的拦截器 拦截器在执行完逻辑之后，再次 InterceptingRequestExecution#execute。InterceptingRequestExecution 再次调用下一个拦截器 在拦截器逻辑执行完之后，会去调用真正的 RequestFactory 创建请求，然后执行请求 在阅读完 InterceptingRequestExecution#execute 的代码之后，我们可以发现。这里仅仅是将 request 的 uri，method，header，body 复制到了 delegate 中。说明拦截器只能对这些属性进行处理，并不能在拦截器层面添加 timeout 的相关处理。 默认情况的 RequestFactory默认情况下 RestTemplate 会使用 SimpleClientHttpRequestFactory 来创建请求，我们也可以在这个类中看到 setReadTimeout 方法。但是 SimpleClientHttpRequestFactory 并没有提供可以拓展的点，只能设置一个针对所有请求的超时时间。感兴趣的同学可以自己阅读下源码，这里就不贴出来了 HttpComponentsClientHttpRequestFactory 在阅读 HttpComponentsClientHttpRequestFactory 时，发现了可以扩展的地方。每次在创建 Request 的时候，都需要在 HttpContext 这个类中设置 RequestConfig，使用过 apache http client 的同学可能知道 RequestConfig 这个类，这个类包含了大量的属性可以定义请求的行为，这其中有一个属性 socketTimeout 正是我们所需要的。 这个类中我们可以扩展的地方就在 createHttpContext 方法中 默认情况下 createHttpContext 返回 null，然后会尝试从 HttpUriRequest 和 HttpClient 中获取 RequestConfig 赋值到 HttpContext 中。 createHttpContext 这个方法我们也来看一下 12345678910111213141516171819202122232425262728@Nullableprivate BiFunction&lt;HttpMethod, URI, HttpContext&gt; httpContextFactory;/** * Configure a factory to pre-create the &#123;@link HttpContext&#125; for each request. * &lt;p&gt;This may be useful for example in mutual TLS authentication where a * different &#123;@code RestTemplate&#125; for each client certificate such that * all calls made through a given &#123;@code RestTemplate&#125; instance as associated * for the same client identity. &#123;@link HttpClientContext#setUserToken(Object)&#125; * can be used to specify a fixed user token for all requests. * @param httpContextFactory the context factory to use * @since 5.2.7 */public void setHttpContextFactory(BiFunction&lt;HttpMethod, URI, HttpContext&gt; httpContextFactory) &#123; this.httpContextFactory = httpContextFactory;&#125;/** * Template methods that creates a &#123;@link HttpContext&#125; for the given HTTP method and URI. * &lt;p&gt;The default implementation returns &#123;@code null&#125;. * @param httpMethod the HTTP method * @param uri the URI * @return the http context */@Nullableprotected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) &#123; return (this.httpContextFactory != null ? this.httpContextFactory.apply(httpMethod, uri) : null);&#125; 至此，已经很清晰了。我们可以通过调用 setHttpContextFactory 来改变 createHttpContext 的结果。 改造思路我们可以开始进行改造了，思路如下 默认的超时时间等属性，我们可以通过 HttpComponentsClientHttpRequestFactory#setHttpClient 或者 HttpComponentsClientHttpRequestFactory#setReadTimeout 来决定 在需要自定义 RequsetConfig 的场景，将 RequsetConfig 存储在 ThreadLocal 中 我们自定义的 HttpContextFactory 在读取到 ThreadLocal 中的 RequsetConfig 后，会生成一个 HttpContext，其他情况返回 null（走原来的逻辑） 代码如下123456789101112public class CustomHttpContextFactory implements BiFunction&lt;HttpMethod, URI, HttpContext&gt; &#123; @Override public HttpContext apply(HttpMethod httpMethod, URI uri) &#123; RequestConfig requestConfig = RequestConfigHolder.get(); if (requestConfig != null) &#123; HttpContext context = HttpClientContext.create(); context.setAttribute(HttpClientContext.REQUEST_CONFIG, requestConfig); return context; &#125; return null; &#125;&#125; 12345678910111213141516public class RequestConfigHolder &#123; private static final ThreadLocal&lt;RequestConfig&gt; threadLocal = new ThreadLocal&lt;&gt;(); public static void bind(RequestConfig requestConfig) &#123; threadLocal.set(requestConfig); &#125; public static RequestConfig get() &#123; return threadLocal.get(); &#125; public static void clear() &#123; threadLocal.remove(); &#125;&#125; 配置类1234567891011121314@Configurationpublic class RestTemplateConfiguration &#123; @Bean("customTimeoutRestTemplate") public RestTemplate customTimeout() &#123; RestTemplate restTemplate = new RestTemplate(); HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(); requestFactory.setHttpContextFactory(new CustomHttpContextFactory()); requestFactory.setReadTimeout(3000); restTemplate.setRequestFactory(requestFactory); return restTemplate; &#125;&#125; 使用案例1234567891011@GetMapping("custom/setTimeout")public String customSetTimeout(Integer timeout) &#123; RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).build(); try &#123; RequestConfigHolder.bind(requestConfig); customTimeoutRestTemplate.getForObject("https://www.baidu.com", String.class); &#125; finally &#123; RequestConfigHolder.clear(); &#125; return "OK";&#125; 思路就是这样，可以将这个使用方式封装为 注解 + AOP，这样用起来会更简单。 Demo本文完整 demo：https://github.com/TavenYin/taven-springboot-learning/tree/master/springboot-restTemplate 最后如果觉得我的文章对你有帮助，动动小手点下关注或者喜欢，你的支持是对我最大的帮助]]></content>
+      <categories>
+        <category>SpringBoot</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>SpringBoot</tag>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[响应式编程入门之 Project Reactor]]></title>
     <url>%2Fpost%2Fe1d95725.html</url>
     <content type="text"><![CDATA[本文目标 理解响应式编程 前言之前的 《聊聊 IO 多路复用》 中，我们理解了非阻塞 IO 的意义。但是 Spring MVC 并不能完美的应用非阻塞编程，于是 Spring 团队开发了 WebFlux，而 WebFlux 的基础正是本文要讲到的 Project Reactor（下文简称为 Reactor） 本文以 Reactor 为例带大家入门响应式编程 版本12345&lt;dependency&gt; &lt;groupId&gt;io.projectreactor&lt;/groupId&gt; &lt;artifactId&gt;reactor-core&lt;/artifactId&gt; &lt;version&gt;3.4.6&lt;/version&gt;&lt;/dependency&gt; 什么是 Reactor Reactor 是 JVM 的非阻塞响应式编程基础，支持背压。 它直接与 Java 8 函数式 API 集成，特别是 CompletableFuture、Stream 和 Duration。 它提供了可组合的异步序列 API — Flux（用于 [N] 个元素）和 Mono（用于 [0|1] 个元素），并实现了 Reactive Streams 规范。在 Reactor 的基础上还演化出了适合微服务架构的 Reactor Netty 。为 HTTP（包括 Websockets）、TCP 和 UDP 提供支持背压和响应式的网络引擎。 上面是对于官方文档的翻译。下面来说说我自己对 Reactor 和响应式编程的理解。 回想一下之前的非阻塞 IO 编程，例如我们现在要用非阻塞的方式调用一个远程服务，当远程接口数据可用时去做一些业务处理。这时候代码怎么写呢？我们需要提供一个回调函数，然后在响应就绪的时候，去调用我们的回调函数。 从逻辑上来看，这完全没有问题。但是如果我们的回调很复杂，代码看起来会是什么样呢？ 1234567891011121314151617181920212223242526272829303132333435363738// 以下案例来自 Reactor 官网userService.getFavorites(userId, new Callback&lt;List&lt;String&gt;&gt;() &#123; public void onSuccess(List&lt;String&gt; list) &#123; if (list.isEmpty()) &#123; suggestionService.getSuggestions(new Callback&lt;List&lt;Favorite&gt;&gt;() &#123; public void onSuccess(List&lt;Favorite&gt; list) &#123; UiUtils.submitOnUiThread(() -&gt; &#123; list.stream() .limit(5) .forEach(uiList::show); &#125;); &#125; public void onError(Throwable error) &#123; UiUtils.errorPopup(error); &#125; &#125;); &#125; else &#123; list.stream() .limit(5) .forEach(favId -&gt; favoriteService.getDetails(favId, new Callback&lt;Favorite&gt;() &#123; public void onSuccess(Favorite details) &#123; UiUtils.submitOnUiThread(() -&gt; uiList.show(details)); &#125; public void onError(Throwable error) &#123; UiUtils.errorPopup(error); &#125; &#125; )); &#125; &#125; public void onError(Throwable error) &#123; UiUtils.errorPopup(error); &#125;&#125;); 这个代码说实话已经有点回调地狱那味儿了，让一段不是很复杂的逻辑变得很难读了。但是如果用 Reactor 写呢？ 1234567// 以下案例来自 Reactor 官网userService.getFavorites(userId) .flatMap(favoriteService::getDetails) .switchIfEmpty(suggestionService.getSuggestions()) .take(5) .publishOn(UiUtils.uiThreadScheduler()) .subscribe(uiList::show, UiUtils::errorPopup); 可以看到，代码变得非常的简洁。唯一带来的困扰就是，我们不知道这些函数到底是啥意思 😂 响应式编程虽然有非常多的特性，但是它并不是什么神奇的技术，它也是建立在传统命令式编程的基础上。只不过它所提供的 API 以及规范更适合在非阻塞 IO 中使用。虽然在非阻塞 IO 框架中几乎只使用响应式编程（Vertx，WebFlux），只是因为这样做更合适，并不是说没了响应式编程，就玩不了非阻塞 IO 了。 响应式编程内幕Reactor 实现了 org.reactivestreams 提供的 Java 响应式编程规范，我们只要了解 reactivestreams 中代码是如何运转的，再看 Reactor 相关的代码就容易多了。 下图展示了 reactivestreams 中的核心接口 Publisher：发布者 Subscriber：订阅者 Subscription：这个单词中文翻译为名词的订阅，在代码中它是发布者和订阅者之间的媒介 Processor：该接口继承了发布者和订阅者，可以理解为发布者和订阅者的中间操作（但是 Reactor 的中间操作并没有实现 Processor，在最新版本的 Reactor 中，Processor 的相关实现接口已经被弃用） 在了解了响应式编程的核心接口之后，我们来看下响应式编程是如何运作的 在 Reactor 中大部分实现都是按照上图的逻辑来执行的 首先是Subscriber（订阅者）主动订阅 Publisher（发布者），通过调用 Publisher 的 subscribe 方法 Publisher 在向下游发送数据之前，会先调用 Subscriber 的 onSubscribe 方法，传递的参数为 Subscription（订阅媒介） Subscriber 通过 Subscription#request 来请求数据，或者 Subscription#cancel 来取消数据发布（这就是响应式编程中的背压，订阅者可以控制数据发布） Subscription 在接收到订阅者的调用后，通过 Subscriber#onNext 向下游订阅者传递数据。 在数据发布完成后，调用 Subscriber#onComplete 结束本次流，如果数据发布或者处理遇到错误会调用 Subscriber#onError 调用 Subscriber#onNext，onComplete，onError 这三个方法，可能是在 Publisher 中做的，也可能是在 Subscription 中做的，根据不同的场景有不同的实现方式，并没有什么严格的要求。可以认为 Publisher 和 Subscription 共同配合完成了数据发布 其实 Reactor 中 API 实现原理也都是这个套路，我这边也自己写了个例子便于让读者加深对响应式编程的理解 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687import org.reactivestreams.Publisher;import org.reactivestreams.Subscriber;import org.reactivestreams.Subscription;/** * @author tianwen.yin */public class SimpleReactiveStream &#123; /** * 实现一个简单的响应式编程发布者 * 逻辑：当订阅者发起订阅时，像下游发送一个 HelloWorld，发布逻辑由 SimpleSubscription 完成 */ static class SimplePublisher implements Publisher &#123; @Override public void subscribe(Subscriber s) &#123; // 2. Publisher 发布数据之前，调用 Subscriber 的 onSubscribe s.onSubscribe(new SimpleSubscription(data(), s)); &#125; private String data() &#123; return "Hello World"; &#125; &#125; static class SimpleSubscriber implements Subscriber &#123; @Override public void onSubscribe(Subscription s) &#123; // 3. Subscriber 通过 Subscription#request 来请求数据 // 或者 Subscription#cancel 来取消数据发布 s.request(Long.MAX_VALUE); &#125; @Override public void onNext(Object o) &#123; System.out.println(o); &#125; @Override public void onError(Throwable t) &#123; System.out.println("error"); &#125; @Override public void onComplete() &#123; System.out.println("complete"); &#125; &#125; static class SimpleSubscription implements Subscription &#123; String data; Subscriber actual; boolean isCanceled; public SimpleSubscription(String data, Subscriber actual) &#123; this.data = data; this.actual = actual; &#125; @Override public void request(long n) &#123; if (!isCanceled) &#123; try &#123; // 4. Subscription 在接收到订阅者的调用后 // 通过 Subscriber#onNext 向下游订阅者传递数据 actual.onNext(data); // 5. 在数据发布完成后，调用 Subscriber#onComplete 结束本次流 actual.onComplete(); &#125; catch (Exception e) &#123; // 如果数据发布或者处理遇到错误会调用 Subscriber#onError actual.onError(e); &#125; &#125; &#125; @Override public void cancel() &#123; isCanceled = true; &#125; &#125; public static void main(String[] args) &#123; // 1. Subscriber ”订阅“ Publisher new SimplePublisher().subscribe(new SimpleSubscriber()); &#125;&#125; 响应式编程思想响应式编程，就像装配一条流水线。Publisher 规定了数据如何生产，中间会有 Operators（操作符）对流水线的数据进行解析，校验，转换等等操作，最终处理好的数据流转到 Subscriber。 这条流水线还有一个特点。大部分情况下当 Publisher 的 subscribe 方法被调用之前，什么都不会发生。在被订阅之前我们只是在定义流水线该如何工作，直到真正有人需要的时候，流水线才会启动。 Reactor 中的 OperatorOperators 怎么理解呢？对于上游来说，Operators 像一个订阅者，而对于它的下游来说，它像一个发布者（我们上文说过了 Reactor 中的中间操作并没有实现 Processor 接口） 123Mono.just("hello") .map(a -&gt; a + "world") .subscribe(System.out::println); 举个简单的例子，在上面的代码中，map 就是一个 Operator，它的实现思路是什么？来看下面的代码 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051// 注意，这是我基于 Reactor API 实现的伪代码！public static class MonoMap implements Publisher &#123; // 我们自定义的转换逻辑 private Function mapper; // source 代表当前操作符的上游发布者 private Publisher source; public MonoMap(Publisher source, Function mapper) &#123; this.source = source; this.mapper = mapper; &#125; @Override public void subscribe(Subscriber actual) &#123; source.subscribe(new MonoMapSubscriber(mapper, actual)); &#125;&#125;public static class MonoMapSubscriber implements Subscriber &#123; // 我们自定义的转换逻辑 private Function mapper; // 真正的下游 private Subscriber actual; public MonoMapSubscriber(Function mapper, Subscriber actual) &#123; this.mapper = mapper; this.actual = actual; &#125; @Override public void onSubscribe(Subscription s) &#123; actual.onSubscribe(s); &#125; @Override public void onNext(Object o) &#123; // 当上游数据发送过来时，先进行转换再发送给下游 Object result = mapper.apply(o); actual.onNext(result); &#125; @Override public void onError(Throwable t) &#123; actual.onError(t); &#125; @Override public void onComplete() &#123; actual.onComplete(); &#125;&#125; 上述代码是我自己实现的一个伪代码，用于让大家理解操作符的实现思路，实际 Reactor 代码也是这个思路，只不过实现的更加巧妙和严谨 我们首先来分析一下 Mono.just(&quot;hello&quot;).map(a -&gt; a + &quot;world&quot;) 这句话 当执行到 Mono.just 时，会新建一个 MonoJust 对象作为当前的 Publisher。该发布者的逻辑是，当订阅时，向下游发送数据 “hello” 当执行到 map 方法时，会新建一个 MonoMap 对象替作为当前的 Publisher，MonoJust 成为了 MonoMap 中的一个属性 source（实际的上游） 当 MonoMap 被订阅时，会先将它的下游 actual 做一层包装，也就是我们上面的 MonoMapSubscriber。然后去调用 source 的 subscribe 方法。上游发布数据时，MonoMapSubscriber 先对数据进行转换（我们上面的拼接字符串操作），然后再发送给 actual（它的下游） 当 MonoMap 被再次转换时，MonoMap 就变成了下游操作符的 source… 最后通过一张图来总结一下 Reactor 该如何学习本文并没有介绍太多 Reactor 的细节，因为这些东西实在是太多了。我想聊聊我自己是如何学习 Reactor 的 如果你已经通过本文理解了响应式编程的核心接口是如何工作的了，那恭喜你已经迈向了成功的第一步了。接下来就是阅读官方文档，不断的练习和阅读 Reactor 的源码。源码追踪的方向已经很明确了，当我们想了解一个发布者的实现原理是什么，我就要去关注这个发布者的 subscribe 方法和 Subscription 都做了什么。想了解消费者的逻辑，就看它的 onNext，onComplete，onError。 最后 如果觉得我的文章对你有帮助，动动小手点下关注，你的支持是对我最大的帮助]]></content>
@@ -34,8 +47,8 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>多线程</tag>
+        <tag>并发</tag>
         <tag>NIO</tag>
         <tag>IO 多路服用</tag>
       </tags>
@@ -202,9 +215,9 @@
       </categories>
       <tags>
         <tag>Java</tag>
+        <tag>Thread</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
-        <tag>Thread</tag>
       </tags>
   </entry>
   <entry>
@@ -237,14 +250,14 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>锁</tag>
-        <tag>Redis</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
+        <tag>Redis</tag>
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
         <tag>分布式</tag>
+        <tag>锁</tag>
       </tags>
   </entry>
   <entry>
@@ -344,9 +357,9 @@
       <tags>
         <tag>Java</tag>
         <tag>多线程</tag>
+        <tag>源码</tag>
         <tag>ThreadPoolExecutor</tag>
         <tag>线程池</tag>
-        <tag>源码</tag>
       </tags>
   </entry>
   <entry>
@@ -369,9 +382,9 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -395,9 +408,9 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
+        <tag>并发</tag>
         <tag>设计模式</tag>
       </tags>
   </entry>
@@ -423,9 +436,9 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>MySQL</tag>
         <tag>并发</tag>
         <tag>锁</tag>
+        <tag>MySQL</tag>
       </tags>
   </entry>
   <entry>
@@ -637,8 +650,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>MySQL</tag>
         <tag>并发</tag>
+        <tag>MySQL</tag>
       </tags>
   </entry>
 </search>
