@@ -9,8 +9,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>SpringBoot</tag>
         <tag>Spring</tag>
+        <tag>SpringBoot</tag>
       </tags>
   </entry>
   <entry>
@@ -215,9 +215,9 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>Thread</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
+        <tag>Thread</tag>
       </tags>
   </entry>
   <entry>
@@ -357,9 +357,9 @@
       <tags>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>源码</tag>
         <tag>ThreadPoolExecutor</tag>
         <tag>线程池</tag>
+        <tag>源码</tag>
       </tags>
   </entry>
   <entry>
@@ -410,8 +410,8 @@
       <tags>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>并发</tag>
         <tag>设计模式</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
