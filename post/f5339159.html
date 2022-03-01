@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Java,SpringBoot,Spring,SpringCloud,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="最近在阅读 Ribbon 的源码，发现 SpringCloud 中 NamedContextFactory 这个类可以实现子容器。Ribbon 为每个 ServiceName 都拥有自己的 Spring Context 和 Bean 实例（不同服务之间的 LoadBalancer 和其依赖的 Bean 都是完全隔离的）。 这么做有什么好处呢  子容器之间数据隔离。不同的 LoadBalancer">
+<meta name="keywords" content="Java,SpringBoot,Spring,SpringCloud">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringCloud NamedContextFactory 原理与使用">
+<meta property="og:url" content="https://yintianwen.top/post/f5339159.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="最近在阅读 Ribbon 的源码，发现 SpringCloud 中 NamedContextFactory 这个类可以实现子容器。Ribbon 为每个 ServiceName 都拥有自己的 Spring Context 和 Bean 实例（不同服务之间的 LoadBalancer 和其依赖的 Bean 都是完全隔离的）。 这么做有什么好处呢  子容器之间数据隔离。不同的 LoadBalancer">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2022-03-01T14:33:17.112Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SpringCloud NamedContextFactory 原理与使用">
+<meta name="twitter:description" content="最近在阅读 Ribbon 的源码，发现 SpringCloud 中 NamedContextFactory 这个类可以实现子容器。Ribbon 为每个 ServiceName 都拥有自己的 Spring Context 和 Bean 实例（不同服务之间的 LoadBalancer 和其依赖的 Bean 都是完全隔离的）。 这么做有什么好处呢  子容器之间数据隔离。不同的 LoadBalancer">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/f5339159.html">
+
+
+
+
+
+  <title>SpringCloud NamedContextFactory 原理与使用 | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">欢迎关注公众号【殷天文】</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/f5339159.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">SpringCloud NamedContextFactory 原理与使用</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-03-01T00:00:00+08:00">
+                2022-03-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SpringBoot/" itemprop="url" rel="index">
+                    <span itemprop="name">SpringBoot</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>最近在阅读 Ribbon 的源码，发现 SpringCloud 中 NamedContextFactory 这个类可以实现<strong>子容器</strong>。Ribbon 为每个 ServiceName 都拥有自己的 Spring Context 和 Bean 实例（不同服务之间的 LoadBalancer 和其依赖的 Bean 都是完全隔离的）。</p>
+<p>这么做有什么好处呢</p>
+<ul>
+<li>子容器之间数据隔离。不同的 LoadBalancer 只管理自己的服务实例，明确自己的职责。</li>
+<li>子容器之间配置隔离。不同的 LoadBalancer 可以使用不同的配置。例如报表服务需要统计和查询大量数据，响应时间可能很慢。而会员服务逻辑相对简单，所以两个服务的响应超时时间可能要求不同。</li>
+<li>子容器之间 Bean 隔离。可以让子容器之间注册不同的 Bean。例如订单服务的 LoadBalancer 底层通过 Nacos 获取实例，会员服务的 LoadBalancer 底层通过 Eureka 获取实例。也可以让不同的 LoadBalancer 采用不同的算法</li>
+</ul>
+<h1 id="NamedContextFactory-简介"><a href="#NamedContextFactory-简介" class="headerlink" title="NamedContextFactory 简介"></a>NamedContextFactory 简介</h1><blockquote>
+<p>NamedContextFactory 可以创建一个子容器（或者说子上下文），每个子容器可以通过 <code>Specification</code> 定义 Bean。 移植自 spring-cloud-netflix FeignClientFactory 和 SpringClientFactory</p>
+</blockquote>
+<p>上面是对于 NamedContextFactory 类注释的翻译。</p>
+<p>接下来，我会使用 NamedContextFactory 实现一个 demo，便于各位理解。</p>
+<p>我实在没想到什么特别好的场景。所以我仿照 Ribbon 实现一个 HttpClient，每个子容器的 HttpClient 生效不同的配置，创建不同的 Bean</p>
+<h1 id="子容器的定制"><a href="#子容器的定制" class="headerlink" title="子容器的定制"></a>子容器的定制</h1><h1 id="NamedContextFactory"><a href="#NamedContextFactory" class="headerlink" title="NamedContextFactory"></a>NamedContextFactory</h1><p>下面来进入正题</p>
+<p>子容器需要通过 NamedContextFactory 来创建。首先我们先继承一下该类实现一个自己的 Factory<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamedHttpClientFactory</span> <span class="keyword">extends</span> <span class="title">NamedContextFactory</span>&lt;<span class="title">NamedHttpClientSpec</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NamedHttpClientFactory</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(NamedHttpClientConfiguration.class, <span class="string">"namedHttpClient"</span>, <span class="string">"http.client.name"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>解释一下上述 super 构造方法三个参数的含义</p>
+<ul>
+<li>第一个参数，默认配置类。当使用 NamedHttpClientFactory 创建子容器时，NamedHttpClientConfiguration 一定会被加载</li>
+<li>第二个参数，我目前没发现有什么用，真的就是随便定义一个 name</li>
+<li>第三个参数，很重要。<br>创建子容器时通常会提供子容器的<code>容器 name</code>。子容器中的 Environment 会被写入一条配置，<code>http.client.name=容器name</code>（也就是说，子容器可以通过读取配置 <code>http.client.name</code> 来获取容器名）</li>
+</ul>
+<p>看到这可能还是很迷惑，这实际有什么用呢？以 Ribbon 为例，容器名就是 ServiceName，Ribbon 可以在配置文件中定制每个子容器的配置或者 Bean，配置如下<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 订单服务的超时时间为 3000</span><br><span class="line">orderService.ribbon.ReadTimeout = 3000</span><br><span class="line"># 指定 orderService 容器的 ServerList</span><br><span class="line">orderService.ribbon.NIWSServerListClassName = com.netflix.loadbalancer.ConfigurationBasedServerList</span><br></pre></td></tr></table></figure></p>
+<p><strong>当每个子容器都知道自己的容器名时，就可以找到自己对应的配置了</strong></p>
+<p>接下来看下，我的默认配置类都干了什么<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamedHttpClientConfiguration</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Value</span>(<span class="string">"$&#123;http.client.name&#125;"</span>)</span><br><span class="line">    <span class="keyword">private</span> String httpClientName; <span class="comment">// 1.</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="meta">@ConditionalOnMissingBean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> ClientConfig <span class="title">clientConfig</span><span class="params">(Environment env)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ClientConfig(httpClientName, env); <span class="comment">// 2.</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="meta">@ConditionalOnMissingBean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> NamedHttpClient <span class="title">namedHttpClient</span><span class="params">(ClientConfig clientConfig)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> NamedHttpClient(httpClientName, clientConfig); <span class="comment">// 3.</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ol>
+<li><code>@Value(&quot;${http.client.name}&quot;)</code>，结合上边讲的，这样可以读到当前子容器的 name</li>
+<li>ClientConfig，负责根据容器 name，加载属于自己的配置。代码比较简单就不贴出来了</li>
+<li>NamedHttpClient，简单的包装一下 HttpClient，会根据 ClientConfig 对 HttpClient 进行配置</li>
+</ol>
+<h2 id="NamedContextFactory-Specification"><a href="#NamedContextFactory-Specification" class="headerlink" title="NamedContextFactory.Specification"></a>NamedContextFactory.Specification</h2><p>上面讲的是可以手动编程来定制子容器的 Bean，NamedContextFactory 也提供了定制子容器的接口 NamedContextFactory.Specification。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamedHttpClientSpec</span> <span class="keyword">implements</span> <span class="title">NamedContextFactory</span>.<span class="title">Specification</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Class&lt;?&gt;[] configuration;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NamedHttpClientSpec</span><span class="params">(String name, Class&lt;?&gt;[] configuration)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">        <span class="keyword">this</span>.configuration = configuration;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Class&lt;?&gt;[] getConfiguration() &#123;</span><br><span class="line">        <span class="keyword">return</span> configuration;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们简单的实现一下该接口，然后通过 <code>NamedHttpClientFactory#setConfigurations</code>，将 Specification 赋值给 NamedHttpClientFactory。</p>
+<p>创建子容器时，如果容器的 name 匹配了 Specification 的 name，则会加载 Specification 对应 Configuration 类。</p>
+<blockquote>
+<p>题外话: @RibbonClient 也是通过 NamedContextFactory.Specification 实现的</p>
+</blockquote>
+<h1 id="Run-一下"><a href="#Run-一下" class="headerlink" title="Run 一下"></a>Run 一下</h1><p>讲到这，也许你还是没懂，没关系，建议 Debug 一下这个单元测试<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamedContextFactoryTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initEnv</span><span class="params">(AnnotationConfigApplicationContext parent)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Object&gt; map = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        map.put(<span class="string">"baidu.socketTimeout"</span>, <span class="number">123</span>);</span><br><span class="line">        map.put(<span class="string">"google.socketTimeout"</span>, <span class="number">456</span>);</span><br><span class="line">        parent.getEnvironment()</span><br><span class="line">                .getPropertySources()</span><br><span class="line">                .addFirst(<span class="keyword">new</span> MapPropertySource(<span class="string">"test"</span>, map));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 创建 parent context</span></span><br><span class="line">        AnnotationConfigApplicationContext parent = <span class="keyword">new</span> AnnotationConfigApplicationContext();</span><br><span class="line">        <span class="comment">// parent context 的 Bean，可以被子容器继承</span></span><br><span class="line">        parent.register(ParentConfiguration.class);</span><br><span class="line">        initEnv(parent);</span><br><span class="line">        parent.refresh();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 容器 name = baidu 的 context 中会注册 TestConfiguration</span></span><br><span class="line">        NamedHttpClientSpec spec = <span class="keyword">new</span> NamedHttpClientSpec(<span class="string">"baidu"</span>, <span class="keyword">new</span> Class[]&#123;TestConfiguration.class&#125;);</span><br><span class="line"></span><br><span class="line">        NamedHttpClientFactory namedHttpClientFactory = <span class="keyword">new</span> NamedHttpClientFactory();</span><br><span class="line">        <span class="comment">// SpringBoot 中无需手动设置，会自动注入 parent</span></span><br><span class="line">        namedHttpClientFactory.setApplicationContext(parent);</span><br><span class="line">        namedHttpClientFactory.setConfigurations(List.of(spec));</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 准备工作完成，现在开始通过 NamedContextFactory get Bean</span></span><br><span class="line">        ParentBean baiduParentBean = namedHttpClientFactory.getInstance(<span class="string">"baidu"</span>, ParentBean.class);</span><br><span class="line">        NamedHttpClient baidu = namedHttpClientFactory.getInstance(<span class="string">"baidu"</span>, NamedHttpClient.class);</span><br><span class="line">        TestBean baiduTestBean = namedHttpClientFactory.getInstance(<span class="string">"baidu"</span>, TestBean.class);</span><br><span class="line"></span><br><span class="line">        Assert.assertNotNull(baiduParentBean);</span><br><span class="line">        Assert.assertEquals(<span class="string">"baidu"</span>, baidu.getServiceName());</span><br><span class="line">        Assert.assertEquals(<span class="number">123</span>, baidu.getRequestConfig().getSocketTimeout());</span><br><span class="line">        Assert.assertNotNull(baiduTestBean);</span><br><span class="line"></span><br><span class="line">        ParentBean googleParentBean = namedHttpClientFactory.getInstance(<span class="string">"google"</span>, ParentBean.class);</span><br><span class="line">        NamedHttpClient google = namedHttpClientFactory.getInstance(<span class="string">"google"</span>, NamedHttpClient.class);</span><br><span class="line">        TestBean googleTestBean = namedHttpClientFactory.getInstance(<span class="string">"google"</span>, TestBean.class);</span><br><span class="line"></span><br><span class="line">        Assert.assertNotNull(googleParentBean);</span><br><span class="line">        Assert.assertEquals(<span class="string">"google"</span>, google.getServiceName());</span><br><span class="line">        Assert.assertEquals(<span class="number">456</span>, google.getRequestConfig().getSocketTimeout());</span><br><span class="line">        Assert.assertNull(googleTestBean);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ParentConfiguration</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Bean</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ParentBean <span class="title">parentBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ParentBean();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">TestConfiguration</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Bean</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> TestBean <span class="title">testBean</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> TestBean();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ParentBean</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">TestBean</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>UT 完整运行参考👉<br><a href="https://github.com/TavenYin/taven-springcloud-learning/blob/master/springcloud-alibaba-nacos/nacos-discovery/src/test/java/com/github/taven/NamedContextFactoryTest.java" target="_blank" rel="noopener">https://github.com/TavenYin/taven-springcloud-learning/blob/master/springcloud-alibaba-nacos/nacos-discovery/src/test/java/com/github/taven/NamedContextFactoryTest.java</a></p>
+<p>Spring 项目中使用子容器参考 👉<br><a href="https://github.com/TavenYin/taven-springcloud-learning/tree/master/springcloud-alibaba-nacos/nacos-discovery/src/main/java/com/github/taven/namedcontext" target="_blank" rel="noopener">https://github.com/TavenYin/taven-springcloud-learning/tree/master/springcloud-alibaba-nacos/nacos-discovery/src/main/java/com/github/taven/namedcontext</a></p>
+<blockquote>
+<p>如果某个 Configuration 类，只需要子容器加载，那么你可以不添加 @Configuration，这样就不会被 Spring 容器（父容器）加载了。</p>
+</blockquote>
+<h1 id="NamedContextFactory-源码分析"><a href="#NamedContextFactory-源码分析" class="headerlink" title="NamedContextFactory 源码分析"></a>NamedContextFactory 源码分析</h1><p>使用该类的入口通常是 getInstance 方法<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> &lt;T&gt; <span class="function">T <span class="title">getInstance</span><span class="params">(String name, Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">	<span class="comment">// 1. 获取子容器</span></span><br><span class="line">	AnnotationConfigApplicationContext context = getContext(name);</span><br><span class="line">	<span class="keyword">try</span> &#123;  </span><br><span class="line">           <span class="comment">// 2. 从子容器中获取 Bean</span></span><br><span class="line">		<span class="keyword">return</span> context.getBean(type);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (NoSuchBeanDefinitionException e) &#123;</span><br><span class="line">		<span class="comment">// ignore</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这个方法内部逻辑很简单</p>
+<ol>
+<li>获取子容器（如果不存在的话，会创建）</li>
+<li>从（子）容器中获取 Bean，这步就可理解为和常规 Spring 操作一样了，从容器中获取 Bean（子容器只是概念上的一个东西，实际 API 都是一样的）</li>
+</ol>
+<p>所以下面我们重点看下 getContext 方法做了什么</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">NamedContextFactory</span>&lt;<span class="title">C</span> <span class="keyword">extends</span> <span class="title">NamedContextFactory</span>.<span class="title">Specification</span>&gt;</span></span><br><span class="line"><span class="class">		<span class="keyword">implements</span> <span class="title">DisposableBean</span>, <span class="title">ApplicationContextAware</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> Map&lt;String, C&gt; configurations = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(); <span class="comment">// 1.</span></span><br><span class="line">	</span><br><span class="line">	<span class="comment">// 省略其他成员变量</span></span><br><span class="line">	</span><br><span class="line">	<span class="function"><span class="keyword">protected</span> AnnotationConfigApplicationContext <span class="title">createContext</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">		AnnotationConfigApplicationContext context = <span class="keyword">new</span> AnnotationConfigApplicationContext();</span><br><span class="line">		<span class="keyword">if</span> (<span class="keyword">this</span>.configurations.containsKey(name)) &#123; <span class="comment">// 2.</span></span><br><span class="line">			<span class="keyword">for</span> (Class&lt;?&gt; configuration : <span class="keyword">this</span>.configurations.get(name)</span><br><span class="line">					.getConfiguration()) &#123;</span><br><span class="line">				context.register(configuration);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">for</span> (Map.Entry&lt;String, C&gt; entry : <span class="keyword">this</span>.configurations.entrySet()) &#123;</span><br><span class="line">			<span class="keyword">if</span> (entry.getKey().startsWith(<span class="string">"default."</span>)) &#123; <span class="comment">// 3.</span></span><br><span class="line">				<span class="keyword">for</span> (Class&lt;?&gt; configuration : entry.getValue().getConfiguration()) &#123;</span><br><span class="line">					context.register(configuration);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		context.register(PropertyPlaceholderAutoConfiguration.class,</span><br><span class="line">				<span class="keyword">this</span>.defaultConfigType); <span class="comment">// 4. </span></span><br><span class="line">		context.getEnvironment().getPropertySources().addFirst(<span class="keyword">new</span> MapPropertySource(</span><br><span class="line">				<span class="keyword">this</span>.propertySourceName,</span><br><span class="line">				Collections.&lt;String, Object&gt;singletonMap(<span class="keyword">this</span>.propertyName, name))); <span class="comment">// 5.</span></span><br><span class="line">		<span class="keyword">if</span> (<span class="keyword">this</span>.parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="comment">// Uses Environment from parent as well as beans</span></span><br><span class="line">			context.setParent(<span class="keyword">this</span>.parent);</span><br><span class="line">			<span class="comment">// jdk11 issue</span></span><br><span class="line">			<span class="comment">// https://github.com/spring-cloud/spring-cloud-netflix/issues/3101</span></span><br><span class="line">			context.setClassLoader(<span class="keyword">this</span>.parent.getClassLoader());</span><br><span class="line">		&#125;</span><br><span class="line">		context.setDisplayName(generateDisplayName(name));</span><br><span class="line">		context.refresh();</span><br><span class="line">		<span class="keyword">return</span> context;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 省略其他方法</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>该 Map 的 value 为 Specification 的实现（用于提供 Configuration），name 为容器名，用于定制每个子容器的配置</li>
+<li>如果 name 匹配，则加载 Configuration</li>
+<li>如果 Specification 的 name 以 <code>default.</code> 开头，则每个子容器创建时，都会加载这些配置</li>
+<li>子容器中注册 PropertyPlaceholderAutoConfiguration，以及 defaultConfigType（PropertyPlaceholderAutoConfiguration 用于解析 Bean 或者 @Value 中的占位符。defaultConfigType 是上文中提到过的，构造方法中提供的子容器默认配置类）</li>
+<li>也是我们上文中说过的，子容器中写入一条配置。以上文为例，会在容器中写入一条 <code>http.client.name=容器name</code></li>
+<li>剩下的就是，设置父容器，以及初始化操作</li>
+</ol>
+<hr>
+<h1 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h1><p>如果觉得我的文章对你有帮助，动动小手点下关注或者喜欢，你的支持是对我最大的帮助</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/SpringBoot/" rel="tag"># SpringBoot</a>
+          
+            <a href="/tags/Spring/" rel="tag"># Spring</a>
+          
+            <a href="/tags/SpringCloud/" rel="tag"># SpringCloud</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/1a81d82f.html" rel="next" title="Spring RestTemplate 设置每次请求的 Timeout">
+                <i class="fa fa-chevron-left"></i> Spring RestTemplate 设置每次请求的 Timeout
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">53</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">64</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#NamedContextFactory-简介"><span class="nav-number">1.</span> <span class="nav-text">NamedContextFactory 简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#子容器的定制"><span class="nav-number">2.</span> <span class="nav-text">子容器的定制</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#NamedContextFactory"><span class="nav-number">3.</span> <span class="nav-text">NamedContextFactory</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#NamedContextFactory-Specification"><span class="nav-number">3.1.</span> <span class="nav-text">NamedContextFactory.Specification</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Run-一下"><span class="nav-number">4.</span> <span class="nav-text">Run 一下</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#NamedContextFactory-源码分析"><span class="nav-number">5.</span> <span class="nav-text">NamedContextFactory 源码分析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#最后"><span class="nav-number">6.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
