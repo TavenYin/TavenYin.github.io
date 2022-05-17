@@ -8,9 +8,9 @@
         <category>Drools</category>
       </categories>
       <tags>
-        <tag>Java</tag>
         <tag>Drools</tag>
         <tag>规则引擎</tag>
+        <tag>Java</tag>
       </tags>
   </entry>
   <entry>
@@ -22,8 +22,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>Spring</tag>
         <tag>SpringBoot</tag>
+        <tag>Spring</tag>
         <tag>SpringCloud</tag>
       </tags>
   </entry>
@@ -36,8 +36,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>Spring</tag>
         <tag>SpringBoot</tag>
+        <tag>Spring</tag>
       </tags>
   </entry>
   <entry>
@@ -90,10 +90,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -118,10 +118,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -277,14 +277,14 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>Redis</tag>
         <tag>锁</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
-        <tag>Redis</tag>
+        <tag>分布式</tag>
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
-        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -464,8 +464,8 @@
       </categories>
       <tags>
         <tag>MySQL</tag>
-        <tag>锁</tag>
         <tag>并发</tag>
+        <tag>锁</tag>
       </tags>
   </entry>
   <entry>
