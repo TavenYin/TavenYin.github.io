@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Java,Drools,规则引擎,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="什么是规则引擎 规则引擎是处理复杂规则集合的引擎。通过输入一些基础事件，以推演或者归纳等方式，得到最终的执行结果。规则引擎的核心作用在于将复杂、易变的规则从系统中抽离出来，由灵活可变的规则来描述业务需求  Drools 简介Drools 是 Java 编写的一款开源规则引擎。Drools 的核心算法基于 Rete。早些版本中，Drools 使用的是基于 Rete 二次开发的 ReteOO 算法。在">
+<meta name="keywords" content="Java,Drools,规则引擎">
+<meta property="og:type" content="article">
+<meta property="og:title" content="规则引擎 Drools 执行流程浅析">
+<meta property="og:url" content="https://yintianwen.top/post/a1c836ef.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="什么是规则引擎 规则引擎是处理复杂规则集合的引擎。通过输入一些基础事件，以推演或者归纳等方式，得到最终的执行结果。规则引擎的核心作用在于将复杂、易变的规则从系统中抽离出来，由灵活可变的规则来描述业务需求  Drools 简介Drools 是 Java 编写的一款开源规则引擎。Drools 的核心算法基于 Rete。早些版本中，Drools 使用的是基于 Rete 二次开发的 ReteOO 算法。在">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8ba548af-b098-453d-a70b-c197f293a5f4">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/af8008a0-a175-4386-8051-895729c291b6">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/784737a8-68cd-4040-98ea-0256abf22a99">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/52222d15-e6e2-4e5f-8c6b-a67ee3186d0f">
+<meta property="og:updated_time" content="2022-05-17T15:09:38.333Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="规则引擎 Drools 执行流程浅析">
+<meta name="twitter:description" content="什么是规则引擎 规则引擎是处理复杂规则集合的引擎。通过输入一些基础事件，以推演或者归纳等方式，得到最终的执行结果。规则引擎的核心作用在于将复杂、易变的规则从系统中抽离出来，由灵活可变的规则来描述业务需求  Drools 简介Drools 是 Java 编写的一款开源规则引擎。Drools 的核心算法基于 Rete。早些版本中，Drools 使用的是基于 Rete 二次开发的 ReteOO 算法。在">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8ba548af-b098-453d-a70b-c197f293a5f4">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/a1c836ef.html">
+
+
+
+
+
+  <title>规则引擎 Drools 执行流程浅析 | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">欢迎关注公众号【殷天文】</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/a1c836ef.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">规则引擎 Drools 执行流程浅析</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-04-12T00:00:00+08:00">
+                2022-04-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Drools/" itemprop="url" rel="index">
+                    <span itemprop="name">Drools</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="什么是规则引擎"><a href="#什么是规则引擎" class="headerlink" title="什么是规则引擎"></a>什么是规则引擎</h1><blockquote>
+<p>规则引擎是处理复杂规则集合的引擎。通过输入一些基础事件，以推演或者归纳等方式，得到最终的执行结果。规则引擎的核心作用在于将复杂、易变的规则从系统中抽离出来，由灵活可变的规则来描述业务需求</p>
+</blockquote>
+<h1 id="Drools-简介"><a href="#Drools-简介" class="headerlink" title="Drools 简介"></a>Drools 简介</h1><p>Drools 是 Java 编写的一款开源规则引擎。Drools 的核心算法基于 Rete。早些版本中，Drools 使用的是基于 Rete 二次开发的 ReteOO 算法。在 7.x 版本的 Drools 中，其内部算法已经改为使用 Phreak。Phreak 也是Drools 团队自研的算法，虽然网上关于该算法的资料很少，但是总体来说与 Rete 算法相似。阅读本文之前可以先了解下 <a href="https://en.wikipedia.org/wiki/Rete_algorithm" target="_blank" rel="noopener">Rete 算法</a></p>
+<h1 id="编写一个简单的规则"><a href="#编写一个简单的规则" class="headerlink" title="编写一个简单的规则"></a>编写一个简单的规则</h1><p>使用 Drools 需要我们将原有的代码抽象成：Rule（规则） + Fact（事实）</p>
+<p>首先我们先来编写一个简单的 demo 用于后文的原理学习</p>
+<ol>
+<li><p>引入 pom 依赖</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">	<span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;<span class="name">drools.version</span>&gt;</span>7.62.0.Final<span class="tag">&lt;/<span class="name">drools.version</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line">...</span><br><span class="line">		<span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.drools<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>drools-compiler<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;drools.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">		<span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.drools<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>drools-mvel<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">			<span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;drools.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">		<span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>resource 目录下新建 order.drl</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">// 包名用于逻辑上区分 rule</span><br><span class="line">package com.example.drools.order;</span><br><span class="line"></span><br><span class="line">import com.example.drools.demo.HelloDrools.Order</span><br><span class="line">import com.example.drools.demo.HelloDrools.User</span><br><span class="line">import java.util.ArrayList;</span><br><span class="line"></span><br><span class="line">global java.util.List list</span><br><span class="line"></span><br><span class="line">// 指定方言为 java</span><br><span class="line">dialect  &quot;java&quot;</span><br><span class="line"></span><br><span class="line">// 规则的组成包括，条件（when 部分）和动作（then 部分）</span><br><span class="line">// 当满足 when 时，会执行 then 的逻辑</span><br><span class="line">rule &quot;order can pay&quot;</span><br><span class="line">    when</span><br><span class="line">        // 要求插入的 fact 必须有一个 User 对象</span><br><span class="line">        // 并且 Order fact 必须满足 price &lt; $user.price</span><br><span class="line">        $user: User()</span><br><span class="line">        $order: Order(price &lt; $user.price)</span><br><span class="line">    then</span><br><span class="line">        System.out.println(&quot;username:&quot; + $user.getName() + &quot;, order price:&quot; + $order.getPrice());</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line">rule &quot;calculate member point&quot;</span><br><span class="line">    when</span><br><span class="line">        $user: User(level &gt; 0)</span><br><span class="line">        $order: Order()</span><br><span class="line">    then</span><br><span class="line">        Double point = $user.getPoint();</span><br><span class="line">        if ($user.getLevel() &gt; 10) &#123;</span><br><span class="line">            $user.setPoint(point + $order.getPrice());</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            $user.setPoint(point + $order.getPrice() * 0.5);</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(&quot;previous point:&quot; + point + &quot;, present point:&quot; + $user.getPoint());</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line">rule &quot;user age &gt; 18&quot;</span><br><span class="line">    when</span><br><span class="line">        $user: User(age &gt; 18)</span><br><span class="line">    then</span><br><span class="line">        System.out.println(&quot;user age &gt; 18&quot;);</span><br><span class="line">end</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>resource 下新建 <code>META-INF\kmodule.xml</code><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;kmodule xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span><br><span class="line">         xmlns=&quot;http://www.drools.org/xsd/kmodule&quot;&gt;</span><br><span class="line">&lt;/kmodule&gt;</span><br></pre></td></tr></table></figure></p>
+<ol start="3">
+<li><p>java 代码部分</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.drools.demo;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> lombok.Data;</span><br><span class="line"><span class="keyword">import</span> org.kie.api.KieServices;</span><br><span class="line"><span class="keyword">import</span> org.kie.api.runtime.KieContainer;</span><br><span class="line"><span class="keyword">import</span> org.kie.api.runtime.KieSession;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tianwen.yin</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HelloDrools</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 初始化</span></span><br><span class="line">        KieServices kieServices = KieServices.Factory.get();</span><br><span class="line">        KieContainer kieContainer = kieServices.newKieClasspathContainer();</span><br><span class="line">        KieSession kieSession = kieContainer.newKieSession();</span><br><span class="line">        <span class="comment">// 构建 fact</span></span><br><span class="line">        User user = <span class="keyword">new</span> User();</span><br><span class="line">        user.setName(<span class="string">"taven"</span>);</span><br><span class="line">        user.setPoint(<span class="number">10</span>D);</span><br><span class="line">        user.setLevel(<span class="number">5</span>);</span><br><span class="line">        user.setPrice(<span class="number">100</span>D);</span><br><span class="line">        user.setAge(<span class="number">19</span>);</span><br><span class="line"></span><br><span class="line">        Order order = <span class="keyword">new</span> Order();</span><br><span class="line">        order.setPrice(<span class="number">58</span>D);</span><br><span class="line">        <span class="comment">// insert fact</span></span><br><span class="line">        kieSession.insert(user);</span><br><span class="line">        kieSession.insert(order);</span><br><span class="line">        <span class="comment">// 触发所有规则</span></span><br><span class="line">        <span class="keyword">int</span> fireCount = kieSession.fireAllRules();</span><br><span class="line">        System.out.println(<span class="string">"fireRuleCount:"</span> + fireCount);</span><br><span class="line">        kieSession.dispose();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Order</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Double price;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Data</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> Integer age;</span><br><span class="line">        <span class="keyword">private</span> Double price;</span><br><span class="line">        <span class="keyword">private</span> Integer level;</span><br><span class="line">        <span class="keyword">private</span> Double point;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>执行结果如下</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">username:taven, order price:58.0</span><br><span class="line">previous point:10.0, present point:39.0</span><br><span class="line">user age &gt; 18</span><br><span class="line">fireRuleCount:3</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h1 id="Drools-执行流程浅析"><a href="#Drools-执行流程浅析" class="headerlink" title="Drools 执行流程浅析"></a>Drools 执行流程浅析</h1><p>Drools 的使用看起来还是比较简单的，但是实际上真正落地使用还是需要详读官方文档的，不是本文重点，就不多赘述了。接下来我们进入正题，分析下执行流程</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8ba548af-b098-453d-a70b-c197f293a5f4" alt></p>
+<p>上述的图，是我结合源码总结的 Drools 执行流程图，<strong>最终目的就是根据插入的 fact 进行推演，如果能走到最后的 Terminal 节点则代表规则会被执行</strong></p>
+<p>我们先来了解一下上图中的所有节点</p>
+<ul>
+<li><p>Object Type Node：简称 OTN，fact 会根据类型流转到不同的 OTN</p>
+</li>
+<li><p>Alpha Node：也被称为单输入节点，所有单对象的约束条件都会被构建为 Alpha 节点，例如 “age &gt; 18”，”leve &gt; 0”</p>
+</li>
+<li><p>Beta Node：双输入节点，不同对象之间的约束会被构建为 Beta 节点，例如 “order.price &gt; user.price”；当一个节点需要同时满足多个单对象约束时也是 Beta 节点；一个节点有超过两个条件约束时，会构建为多个 Beta 节点相连</p>
+<blockquote>
+<p>Beta 节点又分为 Join，Not，Exist 等，本文主要以 Join 节点为例进行说明。对于其他节点来说流程也是一样的，只不过某些具体细节的实现不同</p>
+</blockquote>
+<p>补充一张多 Beta 节点相连的图<br><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/af8008a0-a175-4386-8051-895729c291b6" alt></p>
+</li>
+</ul>
+<ul>
+<li><p>LeftInputAdapterNode：左输入节点，这个节点的作用我最开始也很迷惑。后来在反复 Debug 后终于顿悟了，Beta 节点被设计成只存储右侧进入的 fact，左侧的数据来自 LeftInputAdapterNode 或者另一个 Beta 节点（可能理解不了，请继续往下读）</p>
+</li>
+<li><p>Rule Terminal：当一个 fact 流转到 Terminal 时，代表当前 fact 会触发该规则</p>
+</li>
+<li><p>内存结构：关于 Drools 内存结构这块，与传统 RETE 算法不太一样，我也没有太仔细的研究这块，上图中只是把会存储 fact 的位置标识了出来</p>
+</li>
+</ul>
+<p>实际上 Drools 的源码非常复杂，其中包含的节点远不止提到的这些，我这里仅是基于 RETE 算法的核心内容来刨析下 Drools 原理</p>
+<blockquote>
+<p>注：这里我补充下，Beta 节点的右侧分支，在进入到 Beta 之前，也是可以有 Alpha 节点的。并且当多个 rule 中包含相同条件时也会共用分支。改图和编 demo 实在太麻烦了</p>
+</blockquote>
+<h2 id="准备环节"><a href="#准备环节" class="headerlink" title="准备环节"></a>准备环节</h2><ol>
+<li><p>在解析规则文件时，应该就已经创建了类似上图的节点关系（这个具体源码没有阅读）</p>
+</li>
+<li><p>上述示例中，<code>kieSession.insert(user);</code> 会将 fact 插入到 PropagationList</p>
+</li>
+<li><p>调用 <code>kieSession.fireAllRules();</code> 后，进入到规则引擎核心环节</p>
+</li>
+</ol>
+<h2 id="fireAllRules"><a href="#fireAllRules" class="headerlink" title="fireAllRules"></a>fireAllRules</h2><p>字面意思已经很明显了，触发 Session 中的所有规则</p>
+<h3 id="flush-阶段"><a href="#flush-阶段" class="headerlink" title="flush 阶段"></a>flush 阶段</h3><p>传播 PropagationList 中所有 fact，对照上图中 flush，OTN 下游的所有分支都会遍历访问</p>
+<ol>
+<li>如果某条分支全部都是 Alpha 节点的话，可以直接传播到 Terminal 节点</li>
+<li>如果 fact 流转到 LeftInputAdapterNode 的话，会将 fact 存储在 LeftInputAdapterNode 对应的内存中</li>
+<li>如果 fact 流转到 Beta 节点右侧的话，会将 fact 存储在 Beta 节点的右侧</li>
+</ol>
+<p>当分支走到 Alpha Terminal 节点时，构建一个 RuleAgendaItem 插入到 InternalAgendaGroup 中。这个动作代表当前规则需要进行下一个阶段 <strong>evaluateAndFire</strong></p>
+<p>Beta 节点的逻辑是，当所有的分支入口都存储了数据时，插入 InternalAgendaGroup（这句话可能不太好理解，当仅有一个 Beta 节点时，左右都存储了数据，就会插入 InternalAgendaGroup。如果是多个 Beta 节点相连的话，必须要满足第一个 Beta 的左右，以及下游所有 Beta 的右节点都有数据时才会插入 InternalAgendaGroup）。</p>
+<h3 id="evaluate（评估）"><a href="#evaluate（评估）" class="headerlink" title="evaluate（评估）"></a>evaluate（评估）</h3><p>纯 Alpha 节点的分支，是没有这个步骤的</p>
+<p>以 Beta 节点为例，evaluate 就是基于左右内存进行匹配，找到所有配对成功的数据放入一个集合，将这个集合继续带入到下一个节点，下个节点又可能是 Beta 节点或者 Terminal 节点。</p>
+<ul>
+<li>如果是 Beta 节点的话，则继续进行匹配，配对成功的集合带入到下一个节点…</li>
+<li>如果是 Terminal 节点的话，会将数据插入到 RuleExecutor 的 tupleList 中。这步又是啥意思呢，tupleList 的数据代表，这些数据会真正的代入到规则执行当中去（Alpha Terminal 也会执行这个操作）</li>
+</ul>
+<p>Beta 节点这里还有一个细节，就是在进行左右配对的时候，并不只是遍历查找，而是在条件允许的情况下，Drools 在存储这些数据的时候会建立索引。上述示例的话，并没有建立索引，随便把条件改成 xx.a = yy.b 这种条件的话，就会建立索引。具体索引的实现也很简单，Drools 实现了一个类似 HashMap 的结构来管理索引，感兴趣的同学可以自己打个断点 debug 下。</p>
+<p>断点 Class：PhreakJoinNode</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/784737a8-68cd-4040-98ea-0256abf22a99" alt></p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/52222d15-e6e2-4e5f-8c6b-a67ee3186d0f" alt></p>
+<blockquote>
+<p>注：上图中两个位置，只有一处会被执行</p>
+</blockquote>
+<h3 id="fire"><a href="#fire" class="headerlink" title="fire"></a>fire</h3><p>这里会遍历 RuleExecutor 的 tupleList 执行这些规则。我们的规则文件在 Drools 运行时会被编译成字节码动态执行，具体这块具体用啥实现的没研究。</p>
+<p>fire 阶段还有一个细节就是，我们的规则文件内部是可以调用 insert modify 这些函数的，这些 fact 同样会被插入到 PropagationList 中，内部也会再执行一次 PropagationList flush 操作。整个 fireAllRules 方法内部是一个循环，如果 fire 内部的 fact 命中了规则的话，在 fire 结束后还会继续执行 evaluateAndFire 直到全部触发完为止（所以在规则编写错误的情况下，Drools 可能进入死循环）</p>
+<h2 id="Conflict-resolution"><a href="#Conflict-resolution" class="headerlink" title="Conflict resolution"></a>Conflict resolution</h2><p>冲突解决简单来说就是，当我们知道了要执行的规则都有哪些时，还需要明确这些规则执行的顺序。</p>
+<p>Drools 这里如何解决顺序问题的呢？回顾一下上面提到的 flush 阶段。RuleAgendaItem 插入到 InternalAgendaGroup 中这一步，InternalAgendaGroup 的默认实现为 AgendaGroupQueueImpl，AgendaGroupQueueImpl 中使用了 BinaryHeapQueue（二叉堆队列）来存储元素</p>
+<p>通过二叉堆算法保证每次队列弹出优先级最高的规则，优先级的计算通过 PhreakConflictResolver 来完成</p>
+<p>PhreakConflictResolver 从两个方面来判断优先级</p>
+<ol>
+<li>规则是否声明 salience（salience 越大，优先级越高）</li>
+<li>无法通过 salience 来计算的话，则通过规则 loadOrder 来决定优先级（规则在文件中越靠前则 loadOrder 就越高）</li>
+</ol>
+<h1 id="总结下"><a href="#总结下" class="headerlink" title="总结下"></a>总结下</h1><p>Drools 这种算法逻辑有什么好处呢？下述结论参考了 <a href="https://en.wikipedia.org/wiki/Rete_algorithm" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Rete_algorithm</a></p>
+<ol>
+<li><p>通过共享节点来减少节点的冗余（如果多个 Rule 中有相同的条件，不会重复计算）</p>
+</li>
+<li><p>fact 的变化，不需要完全重新评估，只需要进行增量评估（只需要对 fact 对应的 OTN 重新评估就可以）</p>
+</li>
+<li><p>支持高效的删除 fact （从 Drools 的角度来看这句话，fact 存储时会建立一个双向关联，也就是 fact 知道自己被哪些节点存储了，所以可以高效的删除）</p>
+</li>
+</ol>
+<p>本文介绍了 Drools 的执行流程，由于网上没有找到太多参考资料，大多数结论都是我自己总结出来的，如果有写错的地方欢迎各位指正。</p>
+<h1 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h1><p>如果觉得我的文章对你有帮助，欢迎点赞，关注，转发。你的支持是对我最大的帮助</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"># Java</a>
+          
+            <a href="/tags/Drools/" rel="tag"># Drools</a>
+          
+            <a href="/tags/规则引擎/" rel="tag"># 规则引擎</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/f5339159.html" rel="next" title="SpringCloud NamedContextFactory 原理与使用">
+                <i class="fa fa-chevron-left"></i> SpringCloud NamedContextFactory 原理与使用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">54</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">66</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#什么是规则引擎"><span class="nav-number">1.</span> <span class="nav-text">什么是规则引擎</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Drools-简介"><span class="nav-number">2.</span> <span class="nav-text">Drools 简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#编写一个简单的规则"><span class="nav-number">3.</span> <span class="nav-text">编写一个简单的规则</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Drools-执行流程浅析"><span class="nav-number">4.</span> <span class="nav-text">Drools 执行流程浅析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#准备环节"><span class="nav-number">4.1.</span> <span class="nav-text">准备环节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fireAllRules"><span class="nav-number">4.2.</span> <span class="nav-text">fireAllRules</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#flush-阶段"><span class="nav-number">4.2.1.</span> <span class="nav-text">flush 阶段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#evaluate（评估）"><span class="nav-number">4.2.2.</span> <span class="nav-text">evaluate（评估）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fire"><span class="nav-number">4.2.3.</span> <span class="nav-text">fire</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Conflict-resolution"><span class="nav-number">4.3.</span> <span class="nav-text">Conflict resolution</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结下"><span class="nav-number">5.</span> <span class="nav-text">总结下</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#最后"><span class="nav-number">6.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

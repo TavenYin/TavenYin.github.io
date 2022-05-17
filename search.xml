@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[规则引擎 Drools 执行流程浅析]]></title>
+    <url>%2Fpost%2Fa1c836ef.html</url>
+    <content type="text"><![CDATA[什么是规则引擎 规则引擎是处理复杂规则集合的引擎。通过输入一些基础事件，以推演或者归纳等方式，得到最终的执行结果。规则引擎的核心作用在于将复杂、易变的规则从系统中抽离出来，由灵活可变的规则来描述业务需求 Drools 简介Drools 是 Java 编写的一款开源规则引擎。Drools 的核心算法基于 Rete。早些版本中，Drools 使用的是基于 Rete 二次开发的 ReteOO 算法。在 7.x 版本的 Drools 中，其内部算法已经改为使用 Phreak。Phreak 也是Drools 团队自研的算法，虽然网上关于该算法的资料很少，但是总体来说与 Rete 算法相似。阅读本文之前可以先了解下 Rete 算法 编写一个简单的规则使用 Drools 需要我们将原有的代码抽象成：Rule（规则） + Fact（事实） 首先我们先来编写一个简单的 demo 用于后文的原理学习 引入 pom 依赖 123456789101112131415 &lt;properties&gt; &lt;drools.version&gt;7.62.0.Final&lt;/drools.version&gt; &lt;/properties&gt;... &lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-compiler&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-mvel&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt; &lt;/dependency&gt; resource 目录下新建 order.drl 1234567891011121314151617181920212223242526272829303132333435363738394041424344// 包名用于逻辑上区分 rulepackage com.example.drools.order;import com.example.drools.demo.HelloDrools.Orderimport com.example.drools.demo.HelloDrools.Userimport java.util.ArrayList;global java.util.List list// 指定方言为 javadialect &quot;java&quot;// 规则的组成包括，条件（when 部分）和动作（then 部分）// 当满足 when 时，会执行 then 的逻辑rule &quot;order can pay&quot; when // 要求插入的 fact 必须有一个 User 对象 // 并且 Order fact 必须满足 price &lt; $user.price $user: User() $order: Order(price &lt; $user.price) then System.out.println(&quot;username:&quot; + $user.getName() + &quot;, order price:&quot; + $order.getPrice());endrule &quot;calculate member point&quot; when $user: User(level &gt; 0) $order: Order() then Double point = $user.getPoint(); if ($user.getLevel() &gt; 10) &#123; $user.setPoint(point + $order.getPrice()); &#125; else &#123; $user.setPoint(point + $order.getPrice() * 0.5); &#125; System.out.println(&quot;previous point:&quot; + point + &quot;, present point:&quot; + $user.getPoint());endrule &quot;user age &gt; 18&quot; when $user: User(age &gt; 18) then System.out.println(&quot;user age &gt; 18&quot;);end resource 下新建 META-INF\kmodule.xml1234&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;kmodule xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://www.drools.org/xsd/kmodule&quot;&gt;&lt;/kmodule&gt; java 代码部分 12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152package com.example.drools.demo;import lombok.Data;import org.kie.api.KieServices;import org.kie.api.runtime.KieContainer;import org.kie.api.runtime.KieSession;/** * @author tianwen.yin */public class HelloDrools &#123; public static void main(String[] args) &#123; // 初始化 KieServices kieServices = KieServices.Factory.get(); KieContainer kieContainer = kieServices.newKieClasspathContainer(); KieSession kieSession = kieContainer.newKieSession(); // 构建 fact User user = new User(); user.setName("taven"); user.setPoint(10D); user.setLevel(5); user.setPrice(100D); user.setAge(19); Order order = new Order(); order.setPrice(58D); // insert fact kieSession.insert(user); kieSession.insert(order); // 触发所有规则 int fireCount = kieSession.fireAllRules(); System.out.println("fireRuleCount:" + fireCount); kieSession.dispose(); &#125; @Data public static class Order &#123; private Double price; &#125; @Data public static class User &#123; private String name; private Integer age; private Double price; private Integer level; private Double point; &#125;&#125; 执行结果如下 1234username:taven, order price:58.0previous point:10.0, present point:39.0user age &gt; 18fireRuleCount:3 Drools 执行流程浅析Drools 的使用看起来还是比较简单的，但是实际上真正落地使用还是需要详读官方文档的，不是本文重点，就不多赘述了。接下来我们进入正题，分析下执行流程 上述的图，是我结合源码总结的 Drools 执行流程图，最终目的就是根据插入的 fact 进行推演，如果能走到最后的 Terminal 节点则代表规则会被执行 我们先来了解一下上图中的所有节点 Object Type Node：简称 OTN，fact 会根据类型流转到不同的 OTN Alpha Node：也被称为单输入节点，所有单对象的约束条件都会被构建为 Alpha 节点，例如 “age &gt; 18”，”leve &gt; 0” Beta Node：双输入节点，不同对象之间的约束会被构建为 Beta 节点，例如 “order.price &gt; user.price”；当一个节点需要同时满足多个单对象约束时也是 Beta 节点；一个节点有超过两个条件约束时，会构建为多个 Beta 节点相连 Beta 节点又分为 Join，Not，Exist 等，本文主要以 Join 节点为例进行说明。对于其他节点来说流程也是一样的，只不过某些具体细节的实现不同 补充一张多 Beta 节点相连的图 LeftInputAdapterNode：左输入节点，这个节点的作用我最开始也很迷惑。后来在反复 Debug 后终于顿悟了，Beta 节点被设计成只存储右侧进入的 fact，左侧的数据来自 LeftInputAdapterNode 或者另一个 Beta 节点（可能理解不了，请继续往下读） Rule Terminal：当一个 fact 流转到 Terminal 时，代表当前 fact 会触发该规则 内存结构：关于 Drools 内存结构这块，与传统 RETE 算法不太一样，我也没有太仔细的研究这块，上图中只是把会存储 fact 的位置标识了出来 实际上 Drools 的源码非常复杂，其中包含的节点远不止提到的这些，我这里仅是基于 RETE 算法的核心内容来刨析下 Drools 原理 注：这里我补充下，Beta 节点的右侧分支，在进入到 Beta 之前，也是可以有 Alpha 节点的。并且当多个 rule 中包含相同条件时也会共用分支。改图和编 demo 实在太麻烦了 准备环节 在解析规则文件时，应该就已经创建了类似上图的节点关系（这个具体源码没有阅读） 上述示例中，kieSession.insert(user); 会将 fact 插入到 PropagationList 调用 kieSession.fireAllRules(); 后，进入到规则引擎核心环节 fireAllRules字面意思已经很明显了，触发 Session 中的所有规则 flush 阶段传播 PropagationList 中所有 fact，对照上图中 flush，OTN 下游的所有分支都会遍历访问 如果某条分支全部都是 Alpha 节点的话，可以直接传播到 Terminal 节点 如果 fact 流转到 LeftInputAdapterNode 的话，会将 fact 存储在 LeftInputAdapterNode 对应的内存中 如果 fact 流转到 Beta 节点右侧的话，会将 fact 存储在 Beta 节点的右侧 当分支走到 Alpha Terminal 节点时，构建一个 RuleAgendaItem 插入到 InternalAgendaGroup 中。这个动作代表当前规则需要进行下一个阶段 evaluateAndFire Beta 节点的逻辑是，当所有的分支入口都存储了数据时，插入 InternalAgendaGroup（这句话可能不太好理解，当仅有一个 Beta 节点时，左右都存储了数据，就会插入 InternalAgendaGroup。如果是多个 Beta 节点相连的话，必须要满足第一个 Beta 的左右，以及下游所有 Beta 的右节点都有数据时才会插入 InternalAgendaGroup）。 evaluate（评估）纯 Alpha 节点的分支，是没有这个步骤的 以 Beta 节点为例，evaluate 就是基于左右内存进行匹配，找到所有配对成功的数据放入一个集合，将这个集合继续带入到下一个节点，下个节点又可能是 Beta 节点或者 Terminal 节点。 如果是 Beta 节点的话，则继续进行匹配，配对成功的集合带入到下一个节点… 如果是 Terminal 节点的话，会将数据插入到 RuleExecutor 的 tupleList 中。这步又是啥意思呢，tupleList 的数据代表，这些数据会真正的代入到规则执行当中去（Alpha Terminal 也会执行这个操作） Beta 节点这里还有一个细节，就是在进行左右配对的时候，并不只是遍历查找，而是在条件允许的情况下，Drools 在存储这些数据的时候会建立索引。上述示例的话，并没有建立索引，随便把条件改成 xx.a = yy.b 这种条件的话，就会建立索引。具体索引的实现也很简单，Drools 实现了一个类似 HashMap 的结构来管理索引，感兴趣的同学可以自己打个断点 debug 下。 断点 Class：PhreakJoinNode 注：上图中两个位置，只有一处会被执行 fire这里会遍历 RuleExecutor 的 tupleList 执行这些规则。我们的规则文件在 Drools 运行时会被编译成字节码动态执行，具体这块具体用啥实现的没研究。 fire 阶段还有一个细节就是，我们的规则文件内部是可以调用 insert modify 这些函数的，这些 fact 同样会被插入到 PropagationList 中，内部也会再执行一次 PropagationList flush 操作。整个 fireAllRules 方法内部是一个循环，如果 fire 内部的 fact 命中了规则的话，在 fire 结束后还会继续执行 evaluateAndFire 直到全部触发完为止（所以在规则编写错误的情况下，Drools 可能进入死循环） Conflict resolution冲突解决简单来说就是，当我们知道了要执行的规则都有哪些时，还需要明确这些规则执行的顺序。 Drools 这里如何解决顺序问题的呢？回顾一下上面提到的 flush 阶段。RuleAgendaItem 插入到 InternalAgendaGroup 中这一步，InternalAgendaGroup 的默认实现为 AgendaGroupQueueImpl，AgendaGroupQueueImpl 中使用了 BinaryHeapQueue（二叉堆队列）来存储元素 通过二叉堆算法保证每次队列弹出优先级最高的规则，优先级的计算通过 PhreakConflictResolver 来完成 PhreakConflictResolver 从两个方面来判断优先级 规则是否声明 salience（salience 越大，优先级越高） 无法通过 salience 来计算的话，则通过规则 loadOrder 来决定优先级（规则在文件中越靠前则 loadOrder 就越高） 总结下Drools 这种算法逻辑有什么好处呢？下述结论参考了 https://en.wikipedia.org/wiki/Rete_algorithm 通过共享节点来减少节点的冗余（如果多个 Rule 中有相同的条件，不会重复计算） fact 的变化，不需要完全重新评估，只需要进行增量评估（只需要对 fact 对应的 OTN 重新评估就可以） 支持高效的删除 fact （从 Drools 的角度来看这句话，fact 存储时会建立一个双向关联，也就是 fact 知道自己被哪些节点存储了，所以可以高效的删除） 本文介绍了 Drools 的执行流程，由于网上没有找到太多参考资料，大多数结论都是我自己总结出来的，如果有写错的地方欢迎各位指正。 最后如果觉得我的文章对你有帮助，欢迎点赞，关注，转发。你的支持是对我最大的帮助]]></content>
+      <categories>
+        <category>Drools</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>Drools</tag>
+        <tag>规则引擎</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[SpringCloud NamedContextFactory 原理与使用]]></title>
     <url>%2Fpost%2Ff5339159.html</url>
     <content type="text"><![CDATA[最近在阅读 Ribbon 的源码，发现 SpringCloud 中 NamedContextFactory 这个类可以实现子容器。Ribbon 为每个 ServiceName 都拥有自己的 Spring Context 和 Bean 实例（不同服务之间的 LoadBalancer 和其依赖的 Bean 都是完全隔离的）。 这么做有什么好处呢 子容器之间数据隔离。不同的 LoadBalancer 只管理自己的服务实例，明确自己的职责。 子容器之间配置隔离。不同的 LoadBalancer 可以使用不同的配置。例如报表服务需要统计和查询大量数据，响应时间可能很慢。而会员服务逻辑相对简单，所以两个服务的响应超时时间可能要求不同。 子容器之间 Bean 隔离。可以让子容器之间注册不同的 Bean。例如订单服务的 LoadBalancer 底层通过 Nacos 获取实例，会员服务的 LoadBalancer 底层通过 Eureka 获取实例。也可以让不同的 LoadBalancer 采用不同的算法 NamedContextFactory 简介 NamedContextFactory 可以创建一个子容器（或者说子上下文），每个子容器可以通过 Specification 定义 Bean。 移植自 spring-cloud-netflix FeignClientFactory 和 SpringClientFactory 上面是对于 NamedContextFactory 类注释的翻译。 接下来，我会使用 NamedContextFactory 实现一个 demo，便于各位理解。 我实在没想到什么特别好的场景。所以我仿照 Ribbon 实现一个 HttpClient，每个子容器的 HttpClient 生效不同的配置，创建不同的 Bean 子容器的定制NamedContextFactory下面来进入正题 子容器需要通过 NamedContextFactory 来创建。首先我们先继承一下该类实现一个自己的 Factory12345678@Componentpublic class NamedHttpClientFactory extends NamedContextFactory&lt;NamedHttpClientSpec&gt; &#123; public NamedHttpClientFactory() &#123; super(NamedHttpClientConfiguration.class, "namedHttpClient", "http.client.name"); &#125;&#125; 解释一下上述 super 构造方法三个参数的含义 第一个参数，默认配置类。当使用 NamedHttpClientFactory 创建子容器时，NamedHttpClientConfiguration 一定会被加载 第二个参数，我目前没发现有什么用，真的就是随便定义一个 name 第三个参数，很重要。创建子容器时通常会提供子容器的容器 name。子容器中的 Environment 会被写入一条配置，http.client.name=容器name（也就是说，子容器可以通过读取配置 http.client.name 来获取容器名） 看到这可能还是很迷惑，这实际有什么用呢？以 Ribbon 为例，容器名就是 ServiceName，Ribbon 可以在配置文件中定制每个子容器的配置或者 Bean，配置如下 1234# 订单服务的超时时间为 3000orderService.ribbon.ReadTimeout = 3000# 指定 orderService 容器的 ServerListorderService.ribbon.NIWSServerListClassName = com.netflix.loadbalancer.ConfigurationBasedServerList 当每个子容器都知道自己的容器名时，就可以找到自己对应的配置了 接下来看下，我的默认配置类都干了什么123456789101112131415161718public class NamedHttpClientConfiguration &#123; @Value("$&#123;http.client.name&#125;") private String httpClientName; // 1. @Bean @ConditionalOnMissingBean public ClientConfig clientConfig(Environment env) &#123; return new ClientConfig(httpClientName, env); // 2. &#125; @Bean @ConditionalOnMissingBean public NamedHttpClient namedHttpClient(ClientConfig clientConfig) &#123; return new NamedHttpClient(httpClientName, clientConfig); // 3. &#125;&#125; @Value(&quot;${http.client.name}&quot;)，结合上边讲的，这样可以读到当前子容器的 name ClientConfig，负责根据容器 name，加载属于自己的配置。代码比较简单就不贴出来了 NamedHttpClient，简单的包装一下 HttpClient，会根据 ClientConfig 对 HttpClient 进行配置 NamedContextFactory.Specification上面讲的是可以手动编程来定制子容器的 Bean，NamedContextFactory 也提供了定制子容器的接口 NamedContextFactory.Specification。 1234567891011121314151617181920public class NamedHttpClientSpec implements NamedContextFactory.Specification &#123; private final String name; private final Class&lt;?&gt;[] configuration; public NamedHttpClientSpec(String name, Class&lt;?&gt;[] configuration) &#123; this.name = name; this.configuration = configuration; &#125; @Override public String getName() &#123; return name; &#125; @Override public Class&lt;?&gt;[] getConfiguration() &#123; return configuration; &#125;&#125; 我们简单的实现一下该接口，然后通过 NamedHttpClientFactory#setConfigurations，将 Specification 赋值给 NamedHttpClientFactory。 创建子容器时，如果容器的 name 匹配了 Specification 的 name，则会加载 Specification 对应 Configuration 类。 题外话: @RibbonClient 也是通过 NamedContextFactory.Specification 实现的 Run 一下讲到这，也许你还是没懂，没关系，建议 Debug 一下这个单元测试123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172public class NamedContextFactoryTest &#123; private void initEnv(AnnotationConfigApplicationContext parent) &#123; Map&lt;String, Object&gt; map = new HashMap&lt;&gt;(); map.put("baidu.socketTimeout", 123); map.put("google.socketTimeout", 456); parent.getEnvironment() .getPropertySources() .addFirst(new MapPropertySource("test", map)); &#125; @Test public void test() &#123; // 创建 parent context AnnotationConfigApplicationContext parent = new AnnotationConfigApplicationContext(); // parent context 的 Bean，可以被子容器继承 parent.register(ParentConfiguration.class); initEnv(parent); parent.refresh(); // 容器 name = baidu 的 context 中会注册 TestConfiguration NamedHttpClientSpec spec = new NamedHttpClientSpec("baidu", new Class[]&#123;TestConfiguration.class&#125;); NamedHttpClientFactory namedHttpClientFactory = new NamedHttpClientFactory(); // SpringBoot 中无需手动设置，会自动注入 parent namedHttpClientFactory.setApplicationContext(parent); namedHttpClientFactory.setConfigurations(List.of(spec)); // 准备工作完成，现在开始通过 NamedContextFactory get Bean ParentBean baiduParentBean = namedHttpClientFactory.getInstance("baidu", ParentBean.class); NamedHttpClient baidu = namedHttpClientFactory.getInstance("baidu", NamedHttpClient.class); TestBean baiduTestBean = namedHttpClientFactory.getInstance("baidu", TestBean.class); Assert.assertNotNull(baiduParentBean); Assert.assertEquals("baidu", baidu.getServiceName()); Assert.assertEquals(123, baidu.getRequestConfig().getSocketTimeout()); Assert.assertNotNull(baiduTestBean); ParentBean googleParentBean = namedHttpClientFactory.getInstance("google", ParentBean.class); NamedHttpClient google = namedHttpClientFactory.getInstance("google", NamedHttpClient.class); TestBean googleTestBean = namedHttpClientFactory.getInstance("google", TestBean.class); Assert.assertNotNull(googleParentBean); Assert.assertEquals("google", google.getServiceName()); Assert.assertEquals(456, google.getRequestConfig().getSocketTimeout()); Assert.assertNull(googleTestBean); &#125; static class ParentConfiguration &#123; @Bean public ParentBean parentBean() &#123; return new ParentBean(); &#125; &#125; static class TestConfiguration &#123; @Bean public TestBean testBean() &#123; return new TestBean(); &#125; &#125; static class ParentBean &#123; &#125; static class TestBean &#123; &#125;&#125; UT 完整运行参考👉https://github.com/TavenYin/taven-springcloud-learning/blob/master/springcloud-alibaba-nacos/nacos-discovery/src/test/java/com/github/taven/NamedContextFactoryTest.java Spring 项目中使用子容器参考 👉https://github.com/TavenYin/taven-springcloud-learning/tree/master/springcloud-alibaba-nacos/nacos-discovery/src/main/java/com/github/taven/namedcontext 如果某个 Configuration 类，只需要子容器加载，那么你可以不添加 @Configuration，这样就不会被 Spring 容器（父容器）加载了。 NamedContextFactory 源码分析使用该类的入口通常是 getInstance 方法123456789101112public &lt;T&gt; T getInstance(String name, Class&lt;T&gt; type) &#123; // 1. 获取子容器 AnnotationConfigApplicationContext context = getContext(name); try &#123; // 2. 从子容器中获取 Bean return context.getBean(type); &#125; catch (NoSuchBeanDefinitionException e) &#123; // ignore &#125; return null;&#125; 这个方法内部逻辑很简单 获取子容器（如果不存在的话，会创建） 从（子）容器中获取 Bean，这步就可理解为和常规 Spring 操作一样了，从容器中获取 Bean（子容器只是概念上的一个东西，实际 API 都是一样的） 所以下面我们重点看下 getContext 方法做了什么 1234567891011121314151617181920212223242526272829303132333435363738394041public abstract class NamedContextFactory&lt;C extends NamedContextFactory.Specification&gt; implements DisposableBean, ApplicationContextAware &#123; private Map&lt;String, C&gt; configurations = new ConcurrentHashMap&lt;&gt;(); // 1. // 省略其他成员变量 protected AnnotationConfigApplicationContext createContext(String name) &#123; AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(); if (this.configurations.containsKey(name)) &#123; // 2. for (Class&lt;?&gt; configuration : this.configurations.get(name) .getConfiguration()) &#123; context.register(configuration); &#125; &#125; for (Map.Entry&lt;String, C&gt; entry : this.configurations.entrySet()) &#123; if (entry.getKey().startsWith("default.")) &#123; // 3. for (Class&lt;?&gt; configuration : entry.getValue().getConfiguration()) &#123; context.register(configuration); &#125; &#125; &#125; context.register(PropertyPlaceholderAutoConfiguration.class, this.defaultConfigType); // 4. context.getEnvironment().getPropertySources().addFirst(new MapPropertySource( this.propertySourceName, Collections.&lt;String, Object&gt;singletonMap(this.propertyName, name))); // 5. if (this.parent != null) &#123; // Uses Environment from parent as well as beans context.setParent(this.parent); // jdk11 issue // https://github.com/spring-cloud/spring-cloud-netflix/issues/3101 context.setClassLoader(this.parent.getClassLoader()); &#125; context.setDisplayName(generateDisplayName(name)); context.refresh(); return context; &#125; // 省略其他方法&#125; 该 Map 的 value 为 Specification 的实现（用于提供 Configuration），name 为容器名，用于定制每个子容器的配置 如果 name 匹配，则加载 Configuration 如果 Specification 的 name 以 default. 开头，则每个子容器创建时，都会加载这些配置 子容器中注册 PropertyPlaceholderAutoConfiguration，以及 defaultConfigType（PropertyPlaceholderAutoConfiguration 用于解析 Bean 或者 @Value 中的占位符。defaultConfigType 是上文中提到过的，构造方法中提供的子容器默认配置类） 也是我们上文中说过的，子容器中写入一条配置。以上文为例，会在容器中写入一条 http.client.name=容器name 剩下的就是，设置父容器，以及初始化操作 最后如果觉得我的文章对你有帮助，动动小手点下关注或者喜欢，你的支持是对我最大的帮助]]></content>
@@ -9,8 +22,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>SpringBoot</tag>
         <tag>Spring</tag>
+        <tag>SpringBoot</tag>
         <tag>SpringCloud</tag>
       </tags>
   </entry>
@@ -23,8 +36,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>SpringBoot</tag>
         <tag>Spring</tag>
+        <tag>SpringBoot</tag>
       </tags>
   </entry>
   <entry>
@@ -61,8 +74,8 @@
         <category>Java</category>
       </categories>
       <tags>
-        <tag>多线程</tag>
         <tag>并发</tag>
+        <tag>多线程</tag>
         <tag>NIO</tag>
         <tag>IO 多路服用</tag>
       </tags>
@@ -77,10 +90,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
+        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
-        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -105,10 +118,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
+        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
-        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -229,9 +242,9 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>Thread</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
+        <tag>Thread</tag>
       </tags>
   </entry>
   <entry>
@@ -264,14 +277,14 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>锁</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Redis</tag>
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
-        <tag>锁</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -371,9 +384,9 @@
       <tags>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>源码</tag>
         <tag>ThreadPoolExecutor</tag>
         <tag>线程池</tag>
+        <tag>源码</tag>
       </tags>
   </entry>
   <entry>
@@ -396,9 +409,9 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -422,9 +435,9 @@
         <category>Java</category>
       </categories>
       <tags>
+        <tag>并发</tag>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>并发</tag>
         <tag>设计模式</tag>
       </tags>
   </entry>
@@ -450,9 +463,9 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>并发</tag>
-        <tag>锁</tag>
         <tag>MySQL</tag>
+        <tag>锁</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -664,8 +677,8 @@
         <category>DB</category>
       </categories>
       <tags>
-        <tag>并发</tag>
         <tag>MySQL</tag>
+        <tag>并发</tag>
       </tags>
   </entry>
 </search>
