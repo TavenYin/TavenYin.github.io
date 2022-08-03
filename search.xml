@@ -3,7 +3,7 @@
   <entry>
     <title><![CDATA[Drools：规则加载 & 动态更新方案]]></title>
     <url>%2Fpost%2F907c3799.html</url>
-    <content type="text"><![CDATA[前言本文主要想聊下这几个问题 Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式 版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖12345678910&lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-compiler&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt;&lt;/dependency&gt;&lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-traits&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt;&lt;/dependency&gt; 1.2. 新建 resource/META-INF/kmodule.xml123456789&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;kmodule xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://www.drools.org/xsd/kmodule&quot;&gt; &lt;kbase name=&quot;HelloWorldKB&quot; packages=&quot;org.example.drools.helloworld&quot;&gt; &lt;ksession name=&quot;HelloWorldKS&quot;/&gt; &lt;/kbase&gt;&lt;/kmodule&gt; 1.3. 新建 resource/org/example/drools/helloworld/hello.drl12345678910111213package org.example.drools.helloworld;rule &quot;helloworld1&quot; when then System.out.println(&quot;Hello World11111&quot;);endrule &quot;helloworld2&quot; when then System.out.println(&quot;Hello World2&quot;);end 1.4. 创建 ClasspathContainer，并触发规则12345KieServices ks = KieServices.Factory.get();kieContainer = ks.newKieClasspathContainer();KieSession kieSession = kieContainer.newKieSession("HelloWorldKS");kieSession.fireAllRules();kieSession.dispose(); 创建 ClasspathContainer 流程浅析当执行 ks.newKieClasspathContainer(); 时，会自动寻找 META-INF/kmodule.xml，用于创建 KieModule（KieModule 仅是对 KieBase 以及 KieSession 的定义） 当执行 kieContainer.newKieSession(&quot;HelloWorldKS&quot;) 时，会先创建 KieBase，此时也会去编译规则（如果你的规则文件比较大的话，这个编译过程可能会很慢）。KieBase 创建完成后，使用 KieBase 创建 KieSession ClasspathContainer 方式小结使用该方式的优点是简单、可以快速开发，但是缺点也很明显，规则和配置文件绑定在项目中（耦合度太高）。如果你不需要修改规则文件，这种方式还是可以采纳的 2. KieBuilder123456789101112KieServices ks = KieServices.Factory.get();KieFileSystem kfs = ks.newKieFileSystem();// kfskfs.write("src/main/resources/KBase1/ruleSet1.drl", drl);kfs.write("src/main/resources/META-INF/kmodule.xml", ResourceFactory.newClassPathResource("META-INF/kmodule.xml"));kfs.write("pom.xml", ResourceFactory.newFileResource("your_path/pom.xml"));KieBuilder kieBuilder = ks.newKieBuilder(kfs);kieBuilder.buildAll();// releaseId 与 pom 中声明的一致// 如果 kfs 中未写入 pom 的话，使用 ks.getRepository().getDefaultReleaseId()KieContainer kieContainer = ks.newKieContainer(releaseId); 使用这种方式可以将规则和 kmodule.xml 存储在外部，简单说下流程 使用 KieFileSystem 创建一个基于内存的虚拟文件系统，kfs 中的文件路径规范参考 ClasspathContainer 方式 KieBuilder 使用 kfs 中的 kmodule.xml 以及规则文件创建 KieModule（KieBuilder 内部再将 KieModule 保存在了 KieRepository） 通过 releaseId 创建 KieContainer，如果 kfs 中未指定 pom，则需要将 ks.getRepository().getDefaultReleaseId() 作为参数传入 当你希望把 Drools 资源外部存储时，使用 KieBuilder 是不错的方案 3. KieHelper1234Resource resource = ...;KieHelper helper = new KieHelper();helper.addResource(resource, ResourceType.DRL);KieBase kBase = helper.build(); 使用 KieHelper 可以帮你快速创建一个 KieBase，可以认为是 KieBuilder 的操作简化，内部还是使用了 KieFileSystem 和 KieBuilder，只不过在创建 KieContainer 之后新建了一个 KieBase 作为返回值 测试的时候，或者说想自己管理 KieBase 的话，可以使用这个 API，总的来说不推荐使用。 4. KieScanner这是在 Drools 官方文档中看到的一个骚操作，通过动态加载 jar 的方式来实现资源加载和动态更新，下面简单介绍下。 首先我们需要将业务服务与 Drools 资源分离成两个 jar Drools 资源 jar 具体结构如下，如果你习惯使用 drools-workbench 的话，也可以用它来创建资源 jar 12345678910111213│ pom.xml│└───src ├───main │ ├───java │ └───resources │ ├───com │ │ └───company │ │ └───hello │ │ helloworld.drl │ │ │ └───META-INF │ kmodule.xml pom 中需要注意的两点是 你需要配置一个 jar 推送的远端仓库地址（这里我直接使用的是公司内部搭建的 Nexus） 资源 jar 的 version 必须以 -SNAPSHOT 结尾 资源 jar 准备完成之后，使用命令 mvn clean deploy 将其推送到远端 下面是业务工程的操作 首先 pom 中引入 kie-ci，这里注意啊，不要引入你刚刚创建的资源 jar 12345&lt;dependency&gt; &lt;groupId&gt;org.kie&lt;/groupId&gt; &lt;artifactId&gt;kie-ci&lt;/artifactId&gt; &lt;version&gt;7.69.0.Final&lt;/version&gt;&lt;/dependency&gt; 项目中加入如下代码 123456KieServices kieServices = KieServices.Factory.get();// 注意这里的 releaseId 就是对应的是你资源 jar 的 groupId，artifactId，versionReleaseId releaseId = kieServices.newReleaseId( "org.company", "drl-base", "0.1.0-SNAPSHOT" );KieContainer kContainer = kieServices.newKieContainer( releaseId );KieScanner kScanner = kieServices.newKieScanner( kContainer );kScanner.start( 10000L ); 然后启动业务服务 jar 访问业务服务验证规则是否加载 更新资源 jar 并推送至远端这时候可以看到业务进程会打出如下日志，说明规则更新成功 12022-05-19 16:43:11.223 INFO 20684 --- [ Timer-0] org.kie.api.builder.KieScanner : The following artifacts have been updated: &#123;yourjarName&#125; 验证规则更新 KieScanner 原理浅析 KieScanner 会启动一个线程，按照规定时间去扫描远端 maven 仓库（部署前要在 setting 中配置好 maven 远端仓库 url） 当发现快照时间戳发生变化时，下载到本地（具体如何动态加载的 class 这里我没太关注） 之后会新建一个 KieModule 通过 KieContainerImpl.updateToKieModule 来更新容器，本质上是更新 KBase 看到第三步后，我在想我自己是否可以利用这个 updateToKieModule 方法来实现更新 Container 呢？后来尝试了一下，证明可以 这里就不贴代码了，大概就是下面这样 123KieBuilder = ...KieModule kieModule = kieBuilder.getKieModule();kContainer.updateToKieModule((InternalKieModule) kieModule); 规则库更新1. updateToKieModule上面讲到了 KieContainerImpl.updateToKieModule 的方式来更新规则库。 2. 创建新的 KieContainer基于上面讲到的方式，其实可以想到。如果重新创建 KieContainer 的话，也相当于实现规则库动态更新。但是这种方式也存在一定问题 这是开销最大的一种方式 旧的 container 需要销毁，如果直接调用 dispose 方法清理资源可能会销毁正在使用的 kSession。 3. InternalKnowledgeBase除此之外，KieBase 的实现类本身也提供了更新以及删除的 API 123456789101112131415// 新增或者更新KnowledgeBuilder kBuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();kBuilder.add(resource, ResourceType.DRL);if (kBuilder.hasErrors()) &#123; KnowledgeBuilderErrors errors = kBuilder.getErrors(); log.error(errors.toString()); return;&#125;InternalKnowledgeBase knowledgeBase = (InternalKnowledgeBase) kContainer.getKieBase(kieBaseName);knowledgeBase.addPackages(kBuilder.getKnowledgePackages());// 删除规则knowledgeBase.removeKiePackage(packageName);// 或者knowledgeBase.removeRule(packageName, ruleName); 重点说明下，如果你要更新一个规则的话，直接调用 addPackages 即可，并不需要先删除再新增（这样反而有可能造成问题） 这种方式相比上面说到的 KieContainerImpl.updateToKieModule 的方式颗粒度要小一些，updateToKieModule 会更新所有的 KBase 并发更新规则起因就是我想了解一下，KSession 正在执行时，更新 KBase 会有什么影响 举个例子具体说下 12345678910111213KnowledgeBuilder kbuilder = getKnowledgeBuilder("helloworld.drl");InternalKnowledgeBase kieBase = KnowledgeBaseFactory.newKnowledgeBase();kieBase.addPackages(kbuilder.getKnowledgePackages());KieSession kieSession = kieBase.newKieSession();kieSession.insert(1d);CompletableFuture.runAsync(() -&gt; &#123; kieBase.removeKiePackage("com.example.drools.helloworld"); log.info("remove package");&#125;).join();kieSession.fireAllRules();kieSession.dispose(); helloworld.drl 只有一个规则，在执行 fireAllRules 之前，执行了 KBase remove 操作，这会导致本次 fire 没有触发任何规则，因为此时 KBase 内部没有规则 这看起来好像挺合理的，但是如果你的本意是想先删除，再新增呢？删除 + 新增并没有一个原子操作，导致业务数据可能没有触发任何规则。 线程1 线程2 创建 kSession 并插入事实 kBase removePackage fireAllRules kBase addPackage 所以推荐尽可能不要在运行时做这种 删除 + 新增的操作 看到这时，其实我还有一个问题。当执行 kieSession.fireAllRules(); 时，规则库也允许被更新吗？ 由于篇幅问题，这里我直接说结论： fireAllRules 成功修改内部状态为 FIRING_ALL_RULES 时，任何 kBase 的修改操作会进入等待队列（等待 fire 结束） 如果 kBase 修改操作先执行了，fireAllRules 会等待 kBase 更新成功后再触发规则 所以仅是动态更新规则的话，对 Drools 的执行是没有影响的 全文总结 我觉得既然使用了规则引擎，解耦是非常重要的，所以比较推荐使用 KieBuilder 的方式来加载规则；如果你真的就不需要规则资源外部存储的话，直接使用 ks.newKieClasspathContainer(); 就可以了 如果你想使用 KieScanner 的话，一定要注意做好快照版本的管理。生产环境和开发环境不能使用同一个 maven 仓库，或者使用不同的版本防止开发环境更新影响生产环境 规则库动态更新方案的话，本文总结了三种 以创建 KieContainer 的方式，实现动态更新 使用 KieContainerImpl.updateToKieModule 使用 InternalKnowledgeBase 的 API 如果你需要动态更新 KieModule 的话，可以考虑使用 updateToKieModule 或者重新创建 KieContainer 的方式（需要注意如果销毁旧的 Container） 如果你仅仅是需要动态更新规则的话，可以考虑使用 InternalKnowledgeBase（该方式开销更小，需要注意不要使用删除+新增的方式）和 updateToKieModule （开销相对前者较大）]]></content>
+    <content type="text"><![CDATA[前言本文主要想聊下这几个问题 Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式 版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖12345678910&lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-compiler&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt;&lt;/dependency&gt;&lt;dependency&gt; &lt;groupId&gt;org.drools&lt;/groupId&gt; &lt;artifactId&gt;drools-traits&lt;/artifactId&gt; &lt;version&gt;$&#123;drools.version&#125;&lt;/version&gt;&lt;/dependency&gt; 1.2. 新建 resource/META-INF/kmodule.xml123456789&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;kmodule xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://www.drools.org/xsd/kmodule&quot;&gt; &lt;kbase name=&quot;HelloWorldKB&quot; packages=&quot;org.example.drools.helloworld&quot;&gt; &lt;ksession name=&quot;HelloWorldKS&quot;/&gt; &lt;/kbase&gt;&lt;/kmodule&gt; 1.3. 新建 resource/org/example/drools/helloworld/hello.drl12345678910111213package org.example.drools.helloworld;rule &quot;helloworld1&quot; when then System.out.println(&quot;Hello World11111&quot;);endrule &quot;helloworld2&quot; when then System.out.println(&quot;Hello World2&quot;);end 1.4. 创建 ClasspathContainer，并触发规则12345KieServices ks = KieServices.Factory.get();kieContainer = ks.newKieClasspathContainer();KieSession kieSession = kieContainer.newKieSession("HelloWorldKS");kieSession.fireAllRules();kieSession.dispose(); 创建 ClasspathContainer 流程浅析当执行 ks.newKieClasspathContainer(); 时，会自动寻找 META-INF/kmodule.xml，用于创建 KieModule（KieModule 仅是对 KieBase 以及 KieSession 的定义） 当执行 kieContainer.newKieSession(&quot;HelloWorldKS&quot;) 时，会先创建 KieBase，此时也会去编译规则（如果你的规则文件比较大的话，这个编译过程可能会很慢）。KieBase 创建完成后，使用 KieBase 创建 KieSession ClasspathContainer 方式小结使用该方式的优点是简单、可以快速开发，但是缺点也很明显，规则和配置文件绑定在项目中（耦合度太高）。如果你不需要修改规则文件，这种方式还是可以采纳的 2. KieBuilder123456789101112KieServices ks = KieServices.Factory.get();KieFileSystem kfs = ks.newKieFileSystem();// kfskfs.write("src/main/resources/KBase1/ruleSet1.drl", drl);kfs.write("src/main/resources/META-INF/kmodule.xml", ResourceFactory.newClassPathResource("META-INF/kmodule.xml"));kfs.write("pom.xml", ResourceFactory.newFileResource("your_path/pom.xml"));KieBuilder kieBuilder = ks.newKieBuilder(kfs);kieBuilder.buildAll();// releaseId 与 pom 中声明的一致// 如果 kfs 中未写入 pom 的话，使用 ks.getRepository().getDefaultReleaseId()KieContainer kieContainer = ks.newKieContainer(releaseId); 使用这种方式可以将规则和 kmodule.xml 存储在外部，简单说下流程 使用 KieFileSystem 创建一个基于内存的虚拟文件系统，kfs 中的文件路径规范参考 ClasspathContainer 方式 KieBuilder 使用 kfs 中的 kmodule.xml 以及规则文件创建 KieModule（KieBuilder 内部再将 KieModule 保存在了 KieRepository） 通过 releaseId 创建 KieContainer，如果 kfs 中未指定 pom，则需要将 ks.getRepository().getDefaultReleaseId() 作为参数传入 当你希望把 Drools 资源外部存储时，使用 KieBuilder 是不错的方案 3. KieHelper1234Resource resource = ...;KieHelper helper = new KieHelper();helper.addResource(resource, ResourceType.DRL);KieBase kBase = helper.build(); 使用 KieHelper 可以帮你快速创建一个 KieBase，可以认为是 KieBuilder 的操作简化，内部还是使用了 KieFileSystem 和 KieBuilder，只不过在创建 KieContainer 之后新建了一个 KieBase 作为返回值 测试的时候，或者说想自己管理 KieBase 的话，可以使用这个 API，总的来说不推荐使用。 4. KieScanner这是在 Drools 官方文档中看到的一个骚操作，通过动态加载 jar 的方式来实现资源加载和动态更新，下面简单介绍下。 首先我们需要将业务服务与 Drools 资源分离成两个 jar Drools 资源 jar 具体结构如下，如果你习惯使用 drools-workbench 的话，也可以用它来创建资源 jar 12345678910111213│ pom.xml│└───src ├───main │ ├───java │ └───resources │ ├───com │ │ └───company │ │ └───hello │ │ helloworld.drl │ │ │ └───META-INF │ kmodule.xml pom 中需要注意的两点是 你需要配置一个 jar 推送的远端仓库地址（这里我直接使用的是公司内部搭建的 Nexus） 资源 jar 的 version 必须以 -SNAPSHOT 结尾 资源 jar 准备完成之后，使用命令 mvn clean deploy 将其推送到远端 下面是业务工程的操作 首先 pom 中引入 kie-ci，这里注意啊，不要引入你刚刚创建的资源 jar 12345&lt;dependency&gt; &lt;groupId&gt;org.kie&lt;/groupId&gt; &lt;artifactId&gt;kie-ci&lt;/artifactId&gt; &lt;version&gt;7.69.0.Final&lt;/version&gt;&lt;/dependency&gt; 项目中加入如下代码 123456KieServices kieServices = KieServices.Factory.get();// 注意这里的 releaseId 就是对应的是你资源 jar 的 groupId，artifactId，versionReleaseId releaseId = kieServices.newReleaseId( "org.company", "drl-base", "0.1.0-SNAPSHOT" );KieContainer kContainer = kieServices.newKieContainer( releaseId );KieScanner kScanner = kieServices.newKieScanner( kContainer );kScanner.start( 10000L ); 然后启动业务服务 jar 访问业务服务验证规则是否加载 更新资源 jar 并推送至远端这时候可以看到业务进程会打出如下日志，说明规则更新成功 12022-05-19 16:43:11.223 INFO 20684 --- [ Timer-0] org.kie.api.builder.KieScanner : The following artifacts have been updated: &#123;yourjarName&#125; 验证规则更新 KieScanner 原理浅析 KieScanner 会启动一个线程，按照规定时间去扫描远端 maven 仓库（部署前要在 setting 中配置好 maven 远端仓库 url） 当发现快照时间戳发生变化时，下载到本地（具体如何动态加载的 class 这里我没太关注） 之后会新建一个 KieModule 通过 KieContainerImpl.updateToKieModule 来更新容器，本质上是更新 KBase 看到第三步后，我在想我自己是否可以利用这个 updateToKieModule 方法来实现更新 Container 呢？后来尝试了一下，证明可以 这里就不贴代码了，大概就是下面这样 123KieBuilder = ...KieModule kieModule = kieBuilder.getKieModule();kContainer.updateToKieModule((InternalKieModule) kieModule); 规则库更新1. updateToKieModule上面讲到了 KieContainerImpl.updateToKieModule 的方式来更新规则库。 2. 创建新的 KieContainer基于上面讲到的方式，其实可以想到。如果重新创建 KieContainer 的话，也相当于实现规则库动态更新。但是这种方式也存在一定问题 这是开销最大的一种方式 旧的 container 需要销毁，如果直接调用 dispose 方法清理资源可能会销毁正在使用的 kSession。 3. InternalKnowledgeBase除此之外，KieBase 的实现类本身也提供了更新以及删除的 API 123456789101112131415// 新增或者更新KnowledgeBuilder kBuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();kBuilder.add(resource, ResourceType.DRL);if (kBuilder.hasErrors()) &#123; KnowledgeBuilderErrors errors = kBuilder.getErrors(); log.error(errors.toString()); return;&#125;InternalKnowledgeBase knowledgeBase = (InternalKnowledgeBase) kContainer.getKieBase(kieBaseName);knowledgeBase.addPackages(kBuilder.getKnowledgePackages());// 删除规则knowledgeBase.removeKiePackage(packageName);// 或者knowledgeBase.removeRule(packageName, ruleName); 重点说明下，如果你要更新一个规则的话，直接调用 addPackages 即可，并不需要先删除再新增（这样反而有可能造成问题） 这种方式相比上面说到的 KieContainerImpl.updateToKieModule 的方式颗粒度要小一些，updateToKieModule 会更新所有的 KBase 并发更新规则起因就是我想了解一下，KSession 正在执行时，更新 KBase 会有什么影响 举个例子具体说下 12345678910111213KnowledgeBuilder kbuilder = getKnowledgeBuilder("helloworld.drl");InternalKnowledgeBase kieBase = KnowledgeBaseFactory.newKnowledgeBase();kieBase.addPackages(kbuilder.getKnowledgePackages());KieSession kieSession = kieBase.newKieSession();kieSession.insert(1d);CompletableFuture.runAsync(() -&gt; &#123; kieBase.removeKiePackage("com.example.drools.helloworld"); log.info("remove package");&#125;).join();kieSession.fireAllRules();kieSession.dispose(); helloworld.drl 只有一个规则，在执行 fireAllRules 之前，执行了 KBase remove 操作，这会导致本次 fire 没有触发任何规则，因为此时 KBase 内部没有规则 这看起来好像挺合理的，但是如果你的本意是想先删除，再新增呢？删除 + 新增并没有一个原子操作，导致业务数据可能没有触发任何规则。 线程1 线程2 创建 kSession 并插入事实 kBase removePackage fireAllRules kBase addPackage 所以推荐尽可能不要在运行时做这种 删除 + 新增的操作 看到这时，其实我还有一个问题。当执行 kieSession.fireAllRules(); 时，规则库也允许被更新吗？ 由于篇幅问题，这里我直接说结论： fireAllRules 成功修改内部状态为 FIRING_ALL_RULES 时，任何 kBase 的修改操作会进入等待队列（等待 fire 结束） 如果 kBase 修改操作先执行了，fireAllRules 会等待 kBase 更新成功后再触发规则 所以仅是动态更新规则的话，对 Drools 的执行是没有影响的 全文总结 我觉得既然使用了规则引擎，解耦是非常重要的，所以比较推荐使用 KieBuilder 的方式来加载规则；如果你真的就不需要规则资源外部存储的话，直接使用 ks.newKieClasspathContainer(); 就可以了 如果你想使用 KieScanner 的话，一定要注意做好快照版本的管理。生产环境和开发环境不能使用同一个 maven 仓库，或者使用不同的版本防止开发环境更新影响生产环境 规则库动态更新方案的话，本文总结了三种 以创建 KieContainer 的方式，实现动态更新 使用 KieContainerImpl.updateToKieModule 使用 InternalKnowledgeBase 的 API 如果你需要动态更新 KieModule 的话，可以考虑使用 updateToKieModule 或者重新创建 KieContainer 的方式（需要注意销毁旧的 Container） 如果你仅仅是需要动态更新规则的话，可以考虑使用 InternalKnowledgeBase（该方式开销更小，需要注意不要使用删除+新增的方式）和 updateToKieModule （开销相对前者较大）]]></content>
       <categories>
         <category>Drools</category>
       </categories>
@@ -35,8 +35,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>SpringBoot</tag>
         <tag>Spring</tag>
+        <tag>SpringBoot</tag>
         <tag>SpringCloud</tag>
       </tags>
   </entry>
@@ -49,8 +49,8 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>SpringBoot</tag>
         <tag>Spring</tag>
+        <tag>SpringBoot</tag>
       </tags>
   </entry>
   <entry>
@@ -103,10 +103,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -131,10 +131,10 @@
       <tags>
         <tag>Java</tag>
         <tag>源码</tag>
-        <tag>分布式</tag>
         <tag>Sentinel</tag>
         <tag>限流</tag>
         <tag>微服务</tag>
+        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -255,9 +255,9 @@
       </categories>
       <tags>
         <tag>Java</tag>
-        <tag>Thread</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
+        <tag>Thread</tag>
       </tags>
   </entry>
   <entry>
@@ -295,9 +295,9 @@
         <tag>Java</tag>
         <tag>多线程</tag>
         <tag>源码</tag>
+        <tag>分布式</tag>
         <tag>Redisson</tag>
         <tag>ReentrantLock</tag>
-        <tag>分布式</tag>
       </tags>
   </entry>
   <entry>
@@ -397,9 +397,9 @@
       <tags>
         <tag>Java</tag>
         <tag>多线程</tag>
-        <tag>源码</tag>
         <tag>ThreadPoolExecutor</tag>
         <tag>线程池</tag>
+        <tag>源码</tag>
       </tags>
   </entry>
   <entry>

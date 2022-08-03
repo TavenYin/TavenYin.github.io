@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="殷天文 - Blog">
 <meta property="og:description" content="前言本文主要想聊下这几个问题  Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式  版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖1">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2022-08-03T13:27:07.583Z">
+<meta property="og:updated_time" content="2022-08-03T14:26:56.557Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Drools：规则加载 &amp; 动态更新方案">
 <meta name="twitter:description" content="前言本文主要想聊下这几个问题  Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式  版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖1">
@@ -522,7 +522,7 @@
 </ul>
 </li>
 </ol>
-<p>如果你需要动态更新 KieModule 的话，可以考虑使用 updateToKieModule 或者重新创建 KieContainer 的方式（需要注意如果销毁旧的 Container）</p>
+<p>如果你需要动态更新 KieModule 的话，可以考虑使用 updateToKieModule 或者重新创建 KieContainer 的方式（需要注意销毁旧的 Container）</p>
 <p>如果你仅仅是需要动态更新规则的话，可以考虑使用 InternalKnowledgeBase（该方式开销更小，需要注意不要使用删除+新增的方式）和 updateToKieModule （开销相对前者较大）</p>
 
       
