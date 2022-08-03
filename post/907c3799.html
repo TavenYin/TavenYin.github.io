@@ -87,7 +87,7 @@
 <meta property="og:site_name" content="殷天文 - Blog">
 <meta property="og:description" content="前言本文主要想聊下这几个问题  Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式  版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖1">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2022-05-25T14:42:46.839Z">
+<meta property="og:updated_time" content="2022-08-03T13:27:07.583Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Drools：规则加载 &amp; 动态更新方案">
 <meta name="twitter:description" content="前言本文主要想聊下这几个问题  Drools 的规则资源加载有几种方式 Drools 的规则动态更新有几种方式  版本7.69.0.Final 规则的加载1. 使用 KieClasspathContainer最简单的加载方式，官方的 demo 中使用的也是这种方式，从 classpath 下加载 kmodule 和规则资源。可以快速开始 Drools 应用开发 1.1. 引入 Drools 依赖1">
@@ -506,16 +506,9 @@
 <p>由于篇幅问题，这里我直接说结论：</p>
 <ul>
 <li>fireAllRules 成功修改内部状态为 FIRING_ALL_RULES 时，任何 kBase 的修改操作会进入等待队列（等待 fire 结束）</li>
-<li>如果 kBase 修改操作先执行了，fireAllRules 会直接返回（不会触发任何规则）</li>
+<li>如果 kBase 修改操作先执行了，fireAllRules 会等待 kBase 更新成功后再触发规则</li>
 </ul>
-<p><strong>重点来了：所以动态更新是存在一定风险的，如果可以接受应用重启的话，最好不要玩动态更新</strong></p>
-<blockquote>
-<p>注意：使用 <code>KieContainerImpl.updateToKieModule</code> 的方式本质上也是修改 kBase，所以存在同样的问题</p>
-</blockquote>
-<hr>
-<p>简单说下造成这个现象的原理，感兴趣的同学可自行阅读源码验证</p>
-<p>规则库在执行更新前，会先调用 <code>enqueueModification</code> 方法。该方法内部逻辑为先获取 writeLock。获取成功后尝试停用 kBase 下所有 kSession。</p>
-<p>是否可以停用 kSession 取决于其内部 DefaultAgenda 的状态机。fire 和更新这两个操作谁先更新了状态，谁就可以执行。</p>
+<p>所以仅是动态更新规则的话，对 Drools 的执行是没有影响的</p>
 <h1 id="全文总结"><a href="#全文总结" class="headerlink" title="全文总结"></a>全文总结</h1><ol>
 <li><p>我觉得既然使用了规则引擎，解耦是非常重要的，所以比较推荐使用 KieBuilder 的方式来加载规则；如果你真的就不需要规则资源外部存储的话，直接使用 <code>ks.newKieClasspathContainer();</code> 就可以了</p>
 </li>
@@ -525,10 +518,12 @@
 <ul>
 <li>以创建 KieContainer 的方式，实现动态更新</li>
 <li>使用 <code>KieContainerImpl.updateToKieModule</code></li>
-<li>使用 InternalKnowledgeBase 的 API<br>在讲解各个方案如何实现的同时也分析了各自的利弊，如果要说一定要动态更新的话，要权衡好利弊，尽可能解决上面提到的问题</li>
+<li>使用 InternalKnowledgeBase 的 API</li>
 </ul>
 </li>
 </ol>
+<p>如果你需要动态更新 KieModule 的话，可以考虑使用 updateToKieModule 或者重新创建 KieContainer 的方式（需要注意如果销毁旧的 Container）</p>
+<p>如果你仅仅是需要动态更新规则的话，可以考虑使用 InternalKnowledgeBase（该方式开销更小，需要注意不要使用删除+新增的方式）和 updateToKieModule （开销相对前者较大）</p>
 
       
     </div>
