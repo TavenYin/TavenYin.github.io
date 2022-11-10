@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/book_32px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/book_16px_1233745_easyicon.net.ico?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Reactor,响应式编程,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="本文目标 理解响应式编程  前言之前的 《聊聊 IO 多路复用》 中，我们理解了非阻塞 IO 的意义。但是 Spring MVC 并不能完美的应用非阻塞编程，于是 Spring 团队开发了 WebFlux，而 WebFlux 的基础正是本文要讲到的 Project Reactor（下文简称为 Reactor） 本文以 Reactor 为例带大家入门响应式编程 版本12345&amp;lt;dependen">
+<meta name="keywords" content="Reactor,响应式编程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="响应式编程入门之 Project Reactor">
+<meta property="og:url" content="https://yintianwen.top/post/e1d95725.html">
+<meta property="og:site_name" content="殷天文 - Blog">
+<meta property="og:description" content="本文目标 理解响应式编程  前言之前的 《聊聊 IO 多路复用》 中，我们理解了非阻塞 IO 的意义。但是 Spring MVC 并不能完美的应用非阻塞编程，于是 Spring 团队开发了 WebFlux，而 WebFlux 的基础正是本文要讲到的 Project Reactor（下文简称为 Reactor） 本文以 Reactor 为例带大家入门响应式编程 版本12345&amp;lt;dependen">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/f053a7dc-69b5-434a-b28a-f616b121a681">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8791ebc1-fd3b-498b-9d10-8ccd8bf07f4c">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/255ccb20-abc7-4362-9982-b178504c945f">
+<meta property="og:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/cf741e80-4bd7-4e8a-8f44-8a04e88e65e8">
+<meta property="og:updated_time" content="2021-11-29T15:05:20.168Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="响应式编程入门之 Project Reactor">
+<meta name="twitter:description" content="本文目标 理解响应式编程  前言之前的 《聊聊 IO 多路复用》 中，我们理解了非阻塞 IO 的意义。但是 Spring MVC 并不能完美的应用非阻塞编程，于是 Spring 团队开发了 WebFlux，而 WebFlux 的基础正是本文要讲到的 Project Reactor（下文简称为 Reactor） 本文以 Reactor 为例带大家入门响应式编程 版本12345&amp;lt;dependen">
+<meta name="twitter:image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/f053a7dc-69b5-434a-b28a-f616b121a681">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://yintianwen.top/post/e1d95725.html">
+
+
+
+
+
+  <title>响应式编程入门之 Project Reactor | 殷天文 - Blog</title>
+  
+
+
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?5a4b68d1eece4df07f27f968d19cb832";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">殷天文 - Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">欢迎关注公众号【殷天文】</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            时间线
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://yintianwen.top/post/e1d95725.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="殷天文">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="殷天文 - Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">响应式编程入门之 Project Reactor</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-12T00:00:00+08:00">
+                2021-11-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/响应式编程/" itemprop="url" rel="index">
+                    <span itemprop="name">响应式编程</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="本文目标"><a href="#本文目标" class="headerlink" title="本文目标"></a>本文目标</h1><ul>
+<li>理解响应式编程</li>
+</ul>
+<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>之前的 <a href="https://www.jianshu.com/p/9ebd4fd8c892" target="_blank" rel="noopener">《聊聊 IO 多路复用》</a> 中，我们理解了<strong>非阻塞 IO</strong> 的意义。但是 Spring MVC 并不能完美的应用非阻塞编程，于是 Spring 团队开发了 WebFlux，而 WebFlux 的基础正是本文要讲到的 Project Reactor（下文简称为 Reactor）</p>
+<p>本文以 Reactor 为例带大家入门响应式编程</p>
+<h1 id="版本"><a href="#版本" class="headerlink" title="版本"></a>版本</h1><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.projectreactor<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>reactor-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">	<span class="tag">&lt;<span class="name">version</span>&gt;</span>3.4.6<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h1 id="什么是-Reactor"><a href="#什么是-Reactor" class="headerlink" title="什么是 Reactor"></a>什么是 Reactor</h1><blockquote>
+<p>Reactor 是 JVM 的非阻塞响应式编程基础，支持背压。 它直接与 Java 8 函数式 API 集成，特别是 CompletableFuture、Stream 和 Duration。 它提供了可组合的异步序列 API — Flux（用于 [N] 个元素）和 Mono（用于 [0|1] 个元素），并实现了 Reactive Streams 规范。<br>在 Reactor 的基础上还演化出了适合微服务架构的  Reactor Netty 。为 HTTP（包括 Websockets）、TCP 和 UDP 提供支持背压和响应式的网络引擎。</p>
+</blockquote>
+<p>上面是对于官方文档的翻译。下面来说说我自己对 Reactor 和响应式编程的理解。</p>
+<!-- 如果你之前有看过 Webflux 的源码的，你会怀疑这个东西是啥？是 Java 吗？使用了一堆没见过的 API，什么 Mono，Flux。-->
+<p>回想一下之前的非阻塞 IO 编程，例如我们现在要用非阻塞的方式调用一个远程服务，当远程接口数据可用时去做一些业务处理。这时候代码怎么写呢？我们需要提供一个回调函数，然后在响应就绪的时候，去调用我们的回调函数。</p>
+<p>从逻辑上来看，这完全没有问题。但是如果我们的回调很复杂，代码看起来会是什么样呢？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 以下案例来自 Reactor 官网</span></span><br><span class="line">userService.getFavorites(userId, <span class="keyword">new</span> Callback&lt;List&lt;String&gt;&gt;() &#123; </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(List&lt;String&gt; list)</span> </span>&#123; </span><br><span class="line">    <span class="keyword">if</span> (list.isEmpty()) &#123; </span><br><span class="line">      suggestionService.getSuggestions(<span class="keyword">new</span> Callback&lt;List&lt;Favorite&gt;&gt;() &#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(List&lt;Favorite&gt; list)</span> </span>&#123; </span><br><span class="line">          UiUtils.submitOnUiThread(() -&gt; &#123; </span><br><span class="line">            list.stream()</span><br><span class="line">                .limit(<span class="number">5</span>)</span><br><span class="line">                .forEach(uiList::show); </span><br><span class="line">            &#125;);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable error)</span> </span>&#123; </span><br><span class="line">          UiUtils.errorPopup(error);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      list.stream() </span><br><span class="line">          .limit(<span class="number">5</span>)</span><br><span class="line">          .forEach(favId -&gt; favoriteService.getDetails(favId, </span><br><span class="line">            <span class="keyword">new</span> Callback&lt;Favorite&gt;() &#123;</span><br><span class="line">              <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">(Favorite details)</span> </span>&#123;</span><br><span class="line">                UiUtils.submitOnUiThread(() -&gt; uiList.show(details));</span><br><span class="line">              &#125;</span><br><span class="line"></span><br><span class="line">              <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable error)</span> </span>&#123;</span><br><span class="line">                UiUtils.errorPopup(error);</span><br><span class="line">              &#125;</span><br><span class="line">            &#125;</span><br><span class="line">          ));</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable error)</span> </span>&#123;</span><br><span class="line">    UiUtils.errorPopup(error);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>这个代码说实话已经有点回调地狱那味儿了，让一段不是很复杂的逻辑变得很难读了。但是如果用 Reactor 写呢？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 以下案例来自 Reactor 官网</span></span><br><span class="line">userService.getFavorites(userId) </span><br><span class="line">           .flatMap(favoriteService::getDetails) </span><br><span class="line">           .switchIfEmpty(suggestionService.getSuggestions()) </span><br><span class="line">           .take(<span class="number">5</span>) </span><br><span class="line">           .publishOn(UiUtils.uiThreadScheduler()) </span><br><span class="line">           .subscribe(uiList::show, UiUtils::errorPopup);</span><br></pre></td></tr></table></figure>
+<p>可以看到，代码变得非常的简洁。唯一带来的困扰就是，我们不知道这些函数到底是啥意思 😂</p>
+<p>响应式编程虽然有非常多的特性，但是它并不是什么神奇的技术，它也是建立在传统命令式编程的基础上。只不过它所提供的 API 以及规范更适合在非阻塞 IO 中使用。虽然在非阻塞 IO 框架中几乎只使用响应式编程（Vertx，WebFlux），只是因为这样做更合适，并不是说没了响应式编程，就玩不了非阻塞 IO 了。</p>
+<h1 id="响应式编程内幕"><a href="#响应式编程内幕" class="headerlink" title="响应式编程内幕"></a>响应式编程内幕</h1><p>Reactor 实现了 <code>org.reactivestreams</code> 提供的 Java 响应式编程规范，我们只要了解 reactivestreams 中代码是如何运转的，再看 Reactor 相关的代码就容易多了。</p>
+<p>下图展示了 reactivestreams 中的核心接口</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/f053a7dc-69b5-434a-b28a-f616b121a681" alt="reactivestreams 核心接口"></p>
+<ul>
+<li><p>Publisher：发布者</p>
+</li>
+<li><p>Subscriber：订阅者</p>
+</li>
+<li><p>Subscription：这个单词中文翻译为名词的订阅，在代码中它是发布者和订阅者之间的媒介</p>
+</li>
+<li><p>Processor：该接口继承了发布者和订阅者，可以理解为发布者和订阅者的中间操作（但是 Reactor 的中间操作并没有实现 Processor，在最新版本的 Reactor 中，Processor 的相关实现接口已经被弃用）</p>
+</li>
+</ul>
+<p>在了解了响应式编程的核心接口之后，我们来看下响应式编程是如何运作的</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/8791ebc1-fd3b-498b-9d10-8ccd8bf07f4c" alt="响应式编程执行逻辑"></p>
+<p>在 Reactor 中大部分实现都是按照上图的逻辑来执行的</p>
+<ol>
+<li>首先是Subscriber（订阅者）主动订阅 Publisher（发布者），通过调用 Publisher 的 subscribe 方法</li>
+<li>Publisher 在向下游发送数据之前，会先调用 Subscriber 的 onSubscribe 方法，传递的参数为 Subscription（订阅媒介）</li>
+<li>Subscriber 通过 Subscription#request 来请求数据，或者 Subscription#cancel 来取消数据发布（这就是响应式编程中的背压，订阅者可以控制数据发布）</li>
+<li>Subscription 在接收到订阅者的调用后，通过 Subscriber#onNext 向下游订阅者传递数据。</li>
+<li>在数据发布完成后，调用 Subscriber#onComplete 结束本次流，如果数据发布或者处理遇到错误会调用 Subscriber#onError</li>
+</ol>
+<blockquote>
+<p>调用 Subscriber#onNext，onComplete，onError 这三个方法，可能是在 Publisher 中做的，也可能是在 Subscription 中做的，根据不同的场景有不同的实现方式，并没有什么严格的要求。可以认为 Publisher 和 Subscription 共同配合完成了数据发布</p>
+</blockquote>
+<p>其实 Reactor 中 API 实现原理也都是这个套路，我这边也自己写了个例子便于让读者加深对响应式编程的理解</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.reactivestreams.Publisher;</span><br><span class="line"><span class="keyword">import</span> org.reactivestreams.Subscriber;</span><br><span class="line"><span class="keyword">import</span> org.reactivestreams.Subscription;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tianwen.yin</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleReactiveStream</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 实现一个简单的响应式编程发布者</span></span><br><span class="line"><span class="comment">     * 逻辑：当订阅者发起订阅时，像下游发送一个 HelloWorld，发布逻辑由 SimpleSubscription 完成</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SimplePublisher</span> <span class="keyword">implements</span> <span class="title">Publisher</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribe</span><span class="params">(Subscriber s)</span> </span>&#123;</span><br><span class="line">            <span class="comment">// 2. Publisher 发布数据之前，调用 Subscriber 的 onSubscribe</span></span><br><span class="line">            s.onSubscribe(<span class="keyword">new</span> SimpleSubscription(data(), s));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> String <span class="title">data</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"Hello World"</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleSubscriber</span> <span class="keyword">implements</span> <span class="title">Subscriber</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSubscribe</span><span class="params">(Subscription s)</span> </span>&#123;</span><br><span class="line">            <span class="comment">// 3. Subscriber 通过 Subscription#request 来请求数据</span></span><br><span class="line">            <span class="comment">// 或者 Subscription#cancel 来取消数据发布</span></span><br><span class="line">            s.request(Long.MAX_VALUE);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNext</span><span class="params">(Object o)</span> </span>&#123;</span><br><span class="line">            System.out.println(o);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"error"</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onComplete</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            System.out.println(<span class="string">"complete"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleSubscription</span> <span class="keyword">implements</span> <span class="title">Subscription</span> </span>&#123;</span><br><span class="line">        String data;</span><br><span class="line">        Subscriber actual;</span><br><span class="line">        <span class="keyword">boolean</span> isCanceled;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="title">SimpleSubscription</span><span class="params">(String data, Subscriber actual)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.data = data;</span><br><span class="line">            <span class="keyword">this</span>.actual = actual;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">request</span><span class="params">(<span class="keyword">long</span> n)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (!isCanceled) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="comment">// 4. Subscription 在接收到订阅者的调用后</span></span><br><span class="line">                    <span class="comment">// 通过 Subscriber#onNext 向下游订阅者传递数据</span></span><br><span class="line">                    actual.onNext(data);</span><br><span class="line">                    <span class="comment">// 5. 在数据发布完成后，调用 Subscriber#onComplete 结束本次流</span></span><br><span class="line">                    actual.onComplete();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    <span class="comment">// 如果数据发布或者处理遇到错误会调用 Subscriber#onError</span></span><br><span class="line">                    actual.onError(e);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">cancel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            isCanceled = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 1. Subscriber ”订阅“ Publisher</span></span><br><span class="line">        <span class="keyword">new</span> SimplePublisher().subscribe(<span class="keyword">new</span> SimpleSubscriber());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="响应式编程思想"><a href="#响应式编程思想" class="headerlink" title="响应式编程思想"></a>响应式编程思想</h1><p>响应式编程，就像装配一条流水线。Publisher 规定了数据如何生产，中间会有 Operators（操作符）对流水线的数据进行解析，校验，转换等等操作，最终处理好的数据流转到 Subscriber。</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/255ccb20-abc7-4362-9982-b178504c945f" alt="image.png"></p>
+<p>这条流水线还有一个特点。<strong>大部分情况下</strong>当 Publisher 的 subscribe 方法被调用之前，什么都不会发生。在被订阅之前我们只是在定义流水线该如何工作，直到真正有人需要的时候，流水线才会启动。</p>
+<h1 id="Reactor-中的-Operator"><a href="#Reactor-中的-Operator" class="headerlink" title="Reactor 中的 Operator"></a>Reactor 中的 Operator</h1><p>Operators 怎么理解呢？对于上游来说，Operators 像一个订阅者，而对于它的下游来说，它像一个发布者（我们上文说过了 Reactor 中的中间操作并没有实现 Processor 接口）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Mono.just(<span class="string">"hello"</span>)</span><br><span class="line">        .map(a -&gt; a + <span class="string">"world"</span>)</span><br><span class="line">        .subscribe(System.out::println);</span><br></pre></td></tr></table></figure>
+<p>举个简单的例子，在上面的代码中，map 就是一个 Operator，它的实现思路是什么？来看下面的代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 注意，这是我基于 Reactor API 实现的伪代码！</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MonoMap</span> <span class="keyword">implements</span> <span class="title">Publisher</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 我们自定义的转换逻辑</span></span><br><span class="line">    <span class="keyword">private</span> Function mapper;</span><br><span class="line">    <span class="comment">// source 代表当前操作符的上游发布者</span></span><br><span class="line">    <span class="keyword">private</span> Publisher source;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MonoMap</span><span class="params">(Publisher source, Function mapper)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.source = source;</span><br><span class="line">        <span class="keyword">this</span>.mapper = mapper;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">subscribe</span><span class="params">(Subscriber actual)</span> </span>&#123;</span><br><span class="line">        source.subscribe(<span class="keyword">new</span> MonoMapSubscriber(mapper, actual));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MonoMapSubscriber</span> <span class="keyword">implements</span> <span class="title">Subscriber</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 我们自定义的转换逻辑</span></span><br><span class="line">    <span class="keyword">private</span> Function mapper;</span><br><span class="line">    <span class="comment">// 真正的下游</span></span><br><span class="line">    <span class="keyword">private</span> Subscriber actual;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MonoMapSubscriber</span><span class="params">(Function mapper, Subscriber actual)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.mapper = mapper;</span><br><span class="line">        <span class="keyword">this</span>.actual = actual;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSubscribe</span><span class="params">(Subscription s)</span> </span>&#123;</span><br><span class="line">        actual.onSubscribe(s);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onNext</span><span class="params">(Object o)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 当上游数据发送过来时，先进行转换再发送给下游</span></span><br><span class="line">        Object result = mapper.apply(o);</span><br><span class="line">        actual.onNext(result);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable t)</span> </span>&#123;</span><br><span class="line">        actual.onError(t);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onComplete</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        actual.onComplete();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码是我自己实现的一个伪代码，用于让大家理解操作符的实现思路，实际 Reactor 代码也是这个思路，只不过实现的更加巧妙和严谨</p>
+<p>我们首先来分析一下 <code>Mono.just(&quot;hello&quot;).map(a -&gt; a + &quot;world&quot;)</code> 这句话</p>
+<ol>
+<li>当执行到 Mono.just 时，会新建一个 MonoJust 对象作为当前的 Publisher。该发布者的逻辑是，当订阅时，向下游发送数据 “hello”</li>
+<li><p>当执行到 map 方法时，会新建一个 MonoMap 对象替作为当前的 Publisher，MonoJust 成为了 MonoMap 中的一个属性 source（实际的上游）</p>
+<ul>
+<li><p>当 MonoMap 被订阅时，会先将它的下游 actual 做一层包装，也就是我们上面的 MonoMapSubscriber。然后去调用 source 的 subscribe 方法。上游发布数据时，MonoMapSubscriber 先对数据进行转换（我们上面的拼接字符串操作），然后再发送给 actual（它的下游）</p>
+</li>
+<li><p>当 MonoMap 被再次转换时，MonoMap 就变成了下游操作符的 source…</p>
+</li>
+</ul>
+</li>
+</ol>
+<p>最后通过一张图来总结一下</p>
+<p><img src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/cf741e80-4bd7-4e8a-8f44-8a04e88e65e8" alt="Operator 实现原理"></p>
+<h1 id="Reactor-该如何学习"><a href="#Reactor-该如何学习" class="headerlink" title="Reactor 该如何学习"></a>Reactor 该如何学习</h1><p>本文并没有介绍太多 Reactor 的细节，因为这些东西实在是太多了。我想聊聊我自己是如何学习 Reactor 的</p>
+<p>如果你已经通过本文理解了响应式编程的核心接口是如何工作的了，那恭喜你已经迈向了成功的第一步了。接下来就是阅读官方文档，不断的练习和阅读 Reactor 的源码。源码追踪的方向已经很明确了，当我们想了解一个发布者的实现原理是什么，我就要去关注这个发布者的 subscribe 方法和 Subscription 都做了什么。想了解消费者的逻辑，就看它的 onNext，onComplete，onError。</p>
+<h1 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h1><blockquote>
+<p>如果觉得我的文章对你有帮助，动动小手点下关注，你的支持是对我最大的帮助</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Reactor/" rel="tag"># Reactor</a>
+          
+            <a href="/tags/响应式编程/" rel="tag"># 响应式编程</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/8966d8dd.html" rel="next" title="Opentracing 链路追踪实战">
+                <i class="fa fa-chevron-left"></i> Opentracing 链路追踪实战
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/1a81d82f.html" rel="prev" title="Spring RestTemplate 设置每次请求的 Timeout">
+                Spring RestTemplate 设置每次请求的 Timeout <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://yintianwenblog.oss-cn-beijing.aliyuncs.com/7cd06fea-be0c-4c8b-89b8-130e0d60363f" alt="殷天文">
+            
+              <p class="site-author-name" itemprop="name">殷天文</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">59</span>
+                  <span class="site-state-item-name">博客</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">67</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://www.jianshu.com/u/cd682de00804" target="_blank" title="简书">
+                      
+                        <i class="fa fa-fw fa-book"></i>简书</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/TavenYin" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#本文目标"><span class="nav-number">1.</span> <span class="nav-text">本文目标</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">2.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#版本"><span class="nav-number">3.</span> <span class="nav-text">版本</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#什么是-Reactor"><span class="nav-number">4.</span> <span class="nav-text">什么是 Reactor</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#响应式编程内幕"><span class="nav-number">5.</span> <span class="nav-text">响应式编程内幕</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#响应式编程思想"><span class="nav-number">6.</span> <span class="nav-text">响应式编程思想</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reactor-中的-Operator"><span class="nav-number">7.</span> <span class="nav-text">Reactor 中的 Operator</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reactor-该如何学习"><span class="nav-number">8.</span> <span class="nav-text">Reactor 该如何学习</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#最后"><span class="nav-number">9.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">殷天文</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
